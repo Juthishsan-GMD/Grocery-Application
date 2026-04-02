@@ -1,0 +1,250 @@
+.auth-page {
+  padding-top: 100px;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f3f4f6;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative Background Blobs */
+.auth-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: 0;
+  opacity: 0.5;
+}
+
+.auth-blob-1 {
+  width: 400px;
+  height: 400px;
+  background-color: rgba(16, 185, 129, 0.4);
+  top: -100px;
+  left: -100px;
+}
+
+.auth-blob-2 {
+  width: 500px;
+  height: 500px;
+  background-color: rgba(255, 209, 102, 0.3);
+  bottom: -150px;
+  right: -100px;
+}
+
+/* Split Container */
+.auth-container {
+  display: flex;
+  width: 100%;
+  max-width: 1000px;
+  background-color: white;
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  margin: 2rem;
+  min-height: 550px;
+}
+
+.auth-container.reverse {
+  flex-direction: row-reverse;
+}
+
+/* Left Card - Form Area */
+.auth-card {
+  flex: 1;
+  padding: 4rem 3.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.auth-header {
+  margin-bottom: 2.5rem;
+}
+
+.auth-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.5px;
+}
+
+.auth-subtitle {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+/* Form Styles */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.label-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.forgot-password {
+  font-size: 0.85rem;
+  color: var(--primary-color);
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.3s;
+}
+
+.forgot-password:hover {
+  opacity: 0.8;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 1.2rem;
+  color: #9ca3af;
+  font-size: 1.2rem;
+  transition: color 0.3s;
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding: 0.85rem 1.2rem 0.85rem 3rem;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  background-color: #f9fafb;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  outline: none;
+}
+
+.input-wrapper input:focus {
+  background-color: white;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+
+.input-wrapper input:focus + .input-icon,
+.input-wrapper input:valid + .input-icon {
+  color: var(--primary-color);
+}
+
+.input-wrapper input::placeholder {
+  color: #9ca3af;
+}
+
+.auth-btn {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.btn-icon {
+  transition: transform 0.3s ease;
+}
+
+.auth-btn:hover .btn-icon {
+  transform: translateX(4px);
+}
+
+/* Footer Links */
+.auth-footer {
+  margin-top: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.auth-link {
+  color: var(--primary-color);
+  font-weight: 700;
+  text-decoration: none;
+  margin-left: 0.3rem;
+  transition: opacity 0.3s;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+/* Right Panel - Image/Banner */
+.auth-image-panel {
+  flex: 1;
+  background: linear-gradient(135deg, rgba(5, 150, 105, 0.9), rgba(16, 185, 129, 0.8)), url('https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800') center/cover;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 4rem;
+  color: white;
+  position: relative;
+}
+
+.signup-panel {
+  background: linear-gradient(135deg, rgba(5, 150, 105, 0.9), rgba(16, 185, 129, 0.8)), url('https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&q=80&w=800') center/cover;
+}
+
+.panel-content h2 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+}
+
+.panel-content p {
+  font-size: 1.05rem;
+  opacity: 0.9;
+  line-height: 1.6;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .auth-image-panel {
+    display: none;
+  }
+  .auth-card {
+    padding: 3rem 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-container {
+    margin: 1rem;
+    border-radius: 20px;
+  }
+  .auth-title {
+    font-size: 1.8rem;
+  }
+}
