@@ -92,3 +92,24 @@
 .product-card .add-to-cart-btn {
   padding: 0.6rem 1.5rem !important;
 }
+
+/* ── Deal Price Logic ── */
+.deal-price-wrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.original-price.strike-out {
+  text-decoration: line-through;
+  color: #9ca3af !important;
+  font-size: 0.85rem !important;
+  font-weight: 500 !important;
+}
+
+.deal-price {
+  color: var(--primary-color) !important;
+  font-size: 1.1rem !important;
+  font-weight: 800 !important;
+}

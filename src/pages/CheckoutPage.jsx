@@ -7,6 +7,7 @@ import '../styles/CheckoutPage.css';
 
 // ── GST rate ──────────────────────────────────────────────────
 const GST_RATE = 0.05; // 5%
+const PLATFORM_FEE = 5.00; // Flat ₹5 platform fee
 const COUPONS = {
   DIVINE10:  { type: 'percent', value: 10,  label: '10% off' },
   FIRST50:   { type: 'flat',    value: 50,  label: '₹50 off' },
@@ -70,6 +71,7 @@ const Field = ({ label, error, children }) => (
 // ════════════════════════════════════════════════════════════
 const OrderSummary = ({ cartItems, couponCode, setCouponCode, couponApplied, setCouponApplied, couponError, setCouponError }) => {
   const [open, setOpen] = useState(true);
+  const [showBillDetails, setShowBillDetails] = useState(false);
   const [inputCode, setInputCode] = useState(couponCode);
 
   const subtotal  = cartItems.reduce((s, i) => s + i.price * (i.quantity || 1), 0);
@@ -87,7 +89,8 @@ const OrderSummary = ({ cartItems, couponCode, setCouponCode, couponApplied, set
     }
   }
 
-  const total = subtotal + delivery + gst - couponDisc;
+  const billTotal = delivery + gst + PLATFORM_FEE;
+  const total = subtotal + billTotal - couponDisc;
 
   const handleApplyCoupon = () => {
     const code = inputCode.trim().toUpperCase();
@@ -173,13 +176,50 @@ const OrderSummary = ({ cartItems, couponCode, setCouponCode, couponApplied, set
               </div>
             )}
             <div className="chk-price-row">
-              <span>Delivery</span>
-              <span>{delivery === 0 ? <span className="chk-free">FREE</span> : `₹${delivery}`}</span>
+              <span>Item Total ({cartItems.reduce((n, i) => n + (i.quantity || 1), 0)} items)</span>
+              <span>₹{fmt(subtotal)}</span>
             </div>
-            <div className="chk-price-row">
-              <span>GST (5%)</span>
-              <span>+₹{fmt(gst)}</span>
+            {savings > 0 && (
+              <div className="chk-price-row green">
+                <span>Direct Savings</span>
+                <span>−₹{fmt(savings)}</span>
+              </div>
+            )}
+            {couponDisc > 0 && (
+              <div className="chk-price-row green">
+                <span>Coupon Discount ({couponApplied})</span>
+                <span>−₹{fmt(couponDisc)}</span>
+              </div>
+            )}
+            
+            {/* COLLAPSIBLE BILL DETAILS */}
+            <div className={`chk-bill-details ${showBillDetails ? 'active' : ''}`}>
+              <div className="chk-bill-header" onClick={() => setShowBillDetails(!showBillDetails)}>
+                <span>Taxes & Extra Charges</span>
+                <div className="chk-bill-summary-right">
+                  <span>+₹{fmt(billTotal)}</span>
+                  {showBillDetails ? <FiChevronUp size={14} /> : <FiChevronDown size={14} />}
+                </div>
+              </div>
+              
+              {showBillDetails && (
+                <div className="chk-bill-body">
+                  <div className="chk-price-row small">
+                    <span>Delivery Fee</span>
+                    <span>{delivery === 0 ? <span className="chk-free">FREE</span> : `₹${fmt(delivery)}`}</span>
+                  </div>
+                  <div className="chk-price-row small">
+                    <span>GST (5%)</span>
+                    <span>₹{fmt(gst)}</span>
+                  </div>
+                  <div className="chk-price-row small">
+                    <span>Platform Fee</span>
+                    <span>₹{fmt(PLATFORM_FEE)}</span>
+                  </div>
+                </div>
+              )}
             </div>
+
             <div className="chk-price-divider" />
             <div className="chk-price-row total">
               <span>Total Payable</span>
@@ -480,7 +520,8 @@ const ConfirmStep = ({ delivery, cartItems, couponApplied, onBack, onPlace, isPr
     const c = COUPONS[couponApplied];
     couponDisc = c.type === 'percent' ? subtotal * c.value / 100 : c.value;
   }
-  const total = subtotal + deliveryFee + gst - couponDisc;
+  const billTotal = deliveryFee + gst + PLATFORM_FEE;
+  const total = subtotal + billTotal - couponDisc;
 
   return (
     <div className="chk-step-body">
@@ -510,6 +551,7 @@ const ConfirmStep = ({ delivery, cartItems, couponApplied, onBack, onPlace, isPr
           {couponDisc > 0 && <div className="chk-confirm-row green"><span>Coupon ({couponApplied})</span><span>−₹{fmt(couponDisc)}</span></div>}
           <div className="chk-confirm-row"><span>Delivery</span><span>{deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}</span></div>
           <div className="chk-confirm-row"><span>GST (5%)</span><span>+₹{fmt(gst)}</span></div>
+          <div className="chk-confirm-row"><span>Platform Fee</span><span>+₹{fmt(PLATFORM_FEE)}</span></div>
           <div className="chk-confirm-divider" />
           <div className="chk-confirm-row total"><span>Total Payable</span><span>₹{fmt(total)}</span></div>
         </div>
@@ -594,7 +636,9 @@ const CheckoutPage = () => {
 
     const subtotal = cartItems.reduce((s, i) => s + i.price * (i.quantity || 1), 0);
     const deliveryFee = subtotal >= 499 ? 0 : 49;
-    const total = subtotal + deliveryFee;
+    const gstRate = 0.05;
+    const gst = subtotal * gstRate;
+    const total = subtotal + deliveryFee + gst + 5.00; // Manual calc for email total to match UI logic (5 platform fee)
 
     const templateParams = {
       to_name: delivery.name || 'Customer',

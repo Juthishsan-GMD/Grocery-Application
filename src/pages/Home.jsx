@@ -78,35 +78,17 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Top Deals Marquee Section */}
+      {/* Top Deals Section */}
       <section className="deals-section">
         <div className="container">
-          <div className="section-header">
-            <h2 className="section-title">Top Deals of the Day <span className="fire-emoji"></span></h2>
-            <p className="section-subtitle">Grab these limited-time offers before they're gone!</p>
+          <div className="section-header section-text-center">
+            <h2 className="section-title">Top Deals of the Day</h2>
+            <p className="section-subtitle text-center">Grab these limited-time offers before they're gone!</p>
           </div>
-        </div>
-        
-        <div className="marquee-wrapper">
-          <div className="marquee-content">
-            {products.filter(p => p.discount && p.discount > 0).map((product, idx) => (
-              <div className="marquee-item" key={`deal1-${product.id}-${idx}`}>
-                <ProductCard product={product} cardType="home" />
-              </div>
-            ))}
-          </div>
-          <div className="marquee-content">
-            {products.filter(p => p.discount && p.discount > 0).map((product, idx) => (
-              <div className="marquee-item" key={`deal2-${product.id}-${idx}`}>
-                <ProductCard product={product} cardType="home" />
-              </div>
-            ))}
-          </div>
-          <div className="marquee-content">
-            {products.filter(p => p.discount && p.discount > 0).map((product, idx) => (
-              <div className="marquee-item" key={`deal3-${product.id}-${idx}`}>
-                <ProductCard product={product} cardType="home" />
-              </div>
+          
+          <div className="deals-grid">
+            {products.filter(p => p.discount && p.discount > 0).map((product) => (
+              <ProductCard key={product.id} product={product} cardType="home" />
             ))}
           </div>
         </div>

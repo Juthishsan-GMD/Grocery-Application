@@ -5,8 +5,7 @@ import ScrollToTop from './components/ScrollToTop';
 import Toast from './components/Toast';
 import Home from './pages/Home';
 import Shop from './pages/Shop';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
+import AuthPage from './pages/AuthPage';
 import Cart from './pages/Cart';
 import CheckoutPage from './pages/CheckoutPage';
 import About from './pages/About';
@@ -29,8 +28,8 @@ function App() {
             <Route path="/product/:id" element={<ProductDetails />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+            <Route path="/login" element={<AuthPage />} />
+            <Route path="/signup" element={<AuthPage />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<CheckoutPage />} />
           </Routes>

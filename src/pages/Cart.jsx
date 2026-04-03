@@ -17,9 +17,13 @@ const Cart = () => {
     pincode: ''
   });
 
+  const PLATFORM_FEE = 5.00;
+  const [showBillDetails, setShowBillDetails] = useState(false);
+
   const tax = cartTotal * 0.05; // 5% mock tax
   const shipping = cartTotal > 500 ? 0 : 40; // Free shipping over ₹500
-  const finalTotal = cartTotal + tax + shipping;
+  const billTotal = tax + shipping + PLATFORM_FEE;
+  const finalTotal = cartTotal + billTotal;
 
   const handleProceedToCheckout = () => {
     navigate('/checkout');
@@ -115,27 +119,36 @@ const Cart = () => {
             <h3>Order Summary</h3>
             
             <div className="summary-row">
-              <span>Subtotal</span>
+              <span>Item Subtotal</span>
               <span className="summary-val">₹{cartTotal.toFixed(2)}</span>
             </div>
-            
-            <div className="summary-row">
-              <span>Estimated Tax (5%)</span>
-              <span className="summary-val">₹{tax.toFixed(2)}</span>
-            </div>
-            
-            <div className="summary-row">
-              <span>Shipping</span>
-              <span className="summary-val">
-                {shipping === 0 ? <strong className="free-shipping">FREE</strong> : `₹${shipping.toFixed(2)}`}
-              </span>
-            </div>
-            
-            {shipping > 0 && (
-              <div className="shipping-notice">
-                Add ₹{(500 - cartTotal).toFixed(2)} more for free shipping!
+
+            <div className={`bill-details-dropdown ${showBillDetails ? 'active' : ''}`}>
+              <div className="bill-header" onClick={() => setShowBillDetails(!showBillDetails)}>
+                <span>Extra Charges & Taxes</span>
+                <div className="bill-header-right">
+                  <span className="charges-val">+₹{billTotal.toFixed(2)}</span>
+                  <FiPlus className={`toggle-icon ${showBillDetails ? 'rotating' : ''}`} />
+                </div>
               </div>
-            )}
+
+              {showBillDetails && (
+                <div className="bill-body">
+                  <div className="bill-row">
+                    <span>Estimated GST (5%)</span>
+                    <span>₹{tax.toFixed(2)}</span>
+                  </div>
+                  <div className="bill-row">
+                    <span>Delivery Fee</span>
+                    <span>{shipping === 0 ? <strong className="free">FREE</strong> : `₹${shipping.toFixed(2)}`}</span>
+                  </div>
+                  <div className="bill-row">
+                    <span>Platform Fee</span>
+                    <span>₹{PLATFORM_FEE.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="summary-divider"></div>
             

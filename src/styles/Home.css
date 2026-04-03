@@ -666,20 +666,27 @@
 }
 
 /* ==============================================================
-   TOP DEALS MARQUEE SECTION
+   TOP DEALS GRID SECTION (Renovated)
    ============================================================== */
 .deals-section {
-  padding: 5rem 0;
-  background-color: #ecfdf5; /* Light emerald tint */
-  overflow: hidden;
-  border-top: 1px solid rgba(5, 150, 105, 0.1);
-  border-bottom: 1px solid rgba(5, 150, 105, 0.1);
+  padding: 6rem 0;
+  background: linear-gradient(180deg, #ecfdf5 0%, #f9fafb 100%);
+  border-top: 1px solid rgba(5, 150, 105, 0.05);
 }
 
-.section-subtitle {
-  color: var(--text-secondary);
-  font-size: 1.1rem;
-  margin-top: 0.5rem;
+.text-center {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.text-center .section-title::after {
+  content: '';
+  display: block;
+  width: 80px;
+  height: 4px;
+  background: var(--primary-color);
+  margin: 1.2rem auto 0;
+  border-radius: 2px;
 }
 
 .fire-emoji {
@@ -692,42 +699,34 @@
   100% { transform: scale(1.2) rotate(5deg); }
 }
 
-.marquee-wrapper {
-  display: flex;
-  gap: 2rem;
+.deals-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1.5rem;
   width: 100%;
-  overflow: hidden;
-  padding: 2rem 0;
 }
 
-.marquee-wrapper:hover .marquee-content {
-  animation-play-state: paused;
+@media (max-width: 1200px) {
+  .deals-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
-.marquee-content {
-  display: flex;
-  gap: 2rem;
-  flex-shrink: 0;
-  animation: scrollMarquee 45s linear infinite;
-}
-
-.marquee-item {
-  width: 300px; /* Fixed width to make sure they are uniform in the scroller */
-  flex-shrink: 0;
-}
-
-.marquee-item .product-card {
-  height: 100%;
-}
-
-@keyframes scrollMarquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(calc(-100% - 2rem)); }
+@media (max-width: 992px) {
+  .deals-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
-  .marquee-item {
-    width: 250px;
+  .deals-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .deals-grid {
+    grid-template-columns: 1fr;
   }
 }
 

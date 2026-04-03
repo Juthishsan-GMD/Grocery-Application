@@ -23,7 +23,8 @@ const ProductCard = ({ product, cardType = 'shop' }) => {
   const handleAdd = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart({ ...product, price: selectedVariant.price, unit: selectedVariant.unit });
+    const sellPrice = product.discount > 0 ? selectedVariant.price * (1 - product.discount / 100) : selectedVariant.price;
+    addToCart({ ...product, price: sellPrice, unit: selectedVariant.unit });
   };
 
   const incrementQty = (e) => {
@@ -77,17 +78,35 @@ const ProductCard = ({ product, cardType = 'shop' }) => {
             <CustomSelect 
               value={product.variants.indexOf(selectedVariant)}
               onChange={handleVariantChange}
-              options={product.variants.map((v, idx) => ({
-                value: idx,
-                label: `${v.unit} - ₹${v.price.toFixed(2)}`
-              }))}
+              options={product.variants.map((v, idx) => {
+                const isDiscounted = product.discount > 0;
+                const vSellPrice = isDiscounted ? v.price * (1 - product.discount / 100) : v.price;
+                const priceLabel = isDiscounted 
+                  ? <><span className="original-price strike-out">₹{v.price.toFixed(0)}</span> <span className="deal-price">₹{vSellPrice.toFixed(2)}</span></>
+                  : `₹${v.price.toFixed(2)}`;
+                return {
+                  value: idx,
+                  label: <span style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}>{v.unit} - {priceLabel}</span>
+                };
+              })}
             />
           </div>
         )}
 
         <div className={`${cardType}-footer product-footer`}>
           <div className="price-container">
-            <span className={`${cardType}-price product-price`}>₹{selectedVariant.price.toFixed(2)}</span>
+            {product.discount > 0 ? (
+              <div className="deal-price-wrapper">
+                 <span className={`${cardType}-price original-price strike-out`}>
+                    ₹{selectedVariant.price.toFixed(0)}
+                 </span>
+                 <span className={`${cardType}-price deal-price product-price`}>
+                    ₹{(selectedVariant.price * (1 - product.discount / 100)).toFixed(2)}
+                 </span>
+              </div>
+            ) : (
+                 <span className={`${cardType}-price product-price`}>₹{selectedVariant.price.toFixed(2)}</span>
+            )}
             {!hasVariants && <span className={`${cardType}-unit product-unit`}>/ {product.unit}</span>}
           </div>
           

@@ -4,6 +4,7 @@ import { FiShoppingCart, FiStar, FiChevronLeft, FiCheckCircle, FiTruck, FiShield
 import { products } from '../data';
 import { useCart } from '../context/CartContext';
 import CustomSelect from '../components/CustomSelect';
+import ProductCard from '../components/ProductCard';
 import '../styles/ProductDetails.css';
 
 const ProductDetails = () => {
@@ -37,7 +38,9 @@ const ProductDetails = () => {
   }
 
   const handleAddToCart = () => {
-    const customizedProduct = { ...product, price: selectedVariant.price, unit: selectedVariant.unit };
+    const isDiscounted = product.discount > 0;
+    const sellPrice = isDiscounted ? selectedVariant.price * (1 - product.discount / 100) : selectedVariant.price;
+    const customizedProduct = { ...product, price: sellPrice, unit: selectedVariant.unit };
     addToCart(customizedProduct, `Added ${quantity} ${product.name} to your cart successfully!`);
     
     if (quantity > 1) {
@@ -99,7 +102,18 @@ const ProductDetails = () => {
 
             <div className="pdp-price-row">
               <div className="price-block">
-                <span className="current-price">₹{selectedVariant.price.toFixed(2)}</span>
+                {product.discount > 0 ? (
+                  <div className="pdp-deal-wrapper" style={{ display: 'flex', alignItems: 'baseline', gap: '1rem' }}>
+                    <span className="current-price" style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '1.5rem', fontWeight: 600 }}>
+                      ₹{selectedVariant.price.toFixed(0)}
+                    </span>
+                    <span className="current-price">
+                      ₹{(selectedVariant.price * (1 - product.discount / 100)).toFixed(2)}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="current-price">₹{selectedVariant.price.toFixed(2)}</span>
+                )}
                 {(!product.variants || product.variants.length === 0) && (
                   <span className="price-unit">/ {product.unit}</span>
                 )}
@@ -139,10 +153,17 @@ const ProductDetails = () => {
                   <CustomSelect 
                     value={product.variants.indexOf(product.variants.find(v => v.unit === selectedVariant.unit))}
                     onChange={(val) => setSelectedVariant(product.variants[val])}
-                    options={product.variants.map((v, idx) => ({
-                      value: idx,
-                      label: `${v.unit} - ₹${v.price.toFixed(2)}`
-                    }))}
+                    options={product.variants.map((v, idx) => {
+                      const isDiscounted = product.discount > 0;
+                      const vSellPrice = isDiscounted ? v.price * (1 - product.discount / 100) : v.price;
+                      const priceLabel = isDiscounted 
+                        ? <><span style={{textDecoration: 'line-through', color: '#9ca3af', fontSize: '0.9em'}}>₹{v.price.toFixed(0)}</span> <span style={{color: 'var(--primary-color)', fontWeight: 800}}>₹{vSellPrice.toFixed(2)}</span></>
+                        : `₹${v.price.toFixed(2)}`;
+                      return {
+                        value: idx,
+                        label: <span style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}>{v.unit} - {priceLabel}</span>
+                      };
+                    })}
                   />
                 </div>
               </div>
@@ -168,13 +189,33 @@ const ProductDetails = () => {
               </div>
 
               <button className="btn btn-primary pdp-add-cart-btn" onClick={handleAddToCart}>
-                <FiShoppingCart className="btn-icon" /> Add to Cart — ₹{(selectedVariant.price * quantity).toFixed(2)}
+                <FiShoppingCart className="btn-icon" /> Add to Cart — ₹{
+                  ((product.discount > 0 ? selectedVariant.price * (1 - product.discount / 100) : selectedVariant.price) * quantity).toFixed(2)
+                }
               </button>
             </div>
-
           </div>
-
         </div>
+
+        {/* Similar Products Section */}
+        {product && (
+          <div className="similar-products-section">
+            <div className="similar-products-header">
+              <h2>You Might Also Like</h2>
+              <p>Customers who viewed this item also looked at these fresh products.</p>
+            </div>
+            <div className="similar-products-grid">
+              {products
+                .filter(p => p.category === product.category && p.id !== product.id)
+                .slice(0, 4)
+                .map(p => (
+                  <ProductCard key={p.id} product={p} cardType="shop" />
+                ))
+              }
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

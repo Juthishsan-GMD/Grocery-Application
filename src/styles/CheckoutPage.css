@@ -641,11 +641,67 @@
 
 .chk-price-row.total {
   font-weight: 800;
-  font-size: 1.15rem;
-  color: var(--text-primary);
-  margin-top: 10px;
-  padding-top: 10px;
+  font-size: 1.25rem;
+  color: var(--primary-color);
+  margin-top: 15px;
+  padding-top: 15px;
   border-top: 2px dashed #e5e7eb;
+}
+
+/* ── Bill Details Dropdown ── */
+.chk-bill-details {
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin: 12px 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.chk-bill-details.active {
+  background: #ffffff;
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
+}
+
+.chk-bill-header {
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  user-select: none;
+}
+
+.chk-bill-summary-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary-color);
+}
+
+.chk-bill-body {
+  padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 12px;
+  animation: slideDown 0.3s ease-out;
+}
+
+.chk-price-row.small {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  padding: 2px 0;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .chk-free { color: #10b981; font-weight: 700; }
