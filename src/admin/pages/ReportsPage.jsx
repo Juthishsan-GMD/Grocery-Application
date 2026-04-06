@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { StatCard } from "@/admin/components/StatCard";
+import { StatCard } from "../../admin/components/StatCard";
 import {
   FileBarChart, TrendingUp, ShoppingCart, Users, Search,
   Download, FileText, X, IndianRupee,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import {
   LineChart, Line, BarChart, Bar, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -250,8 +250,16 @@ export default function ReportsPage() {
 
       {/* Revenue Trend Chart */}
       <div className="chart-card">
-        <h3 className="chart-title">Sales Revenue Trend</h3>
-        <p className="chart-subtitle mb-4">Monthly revenue and order volume — last 9 months</p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="chart-title">Sales Revenue Trend</h3>
+            <p className="chart-subtitle">Monthly revenue and order volume — last 9 months</p>
+          </div>
+          <div className="flex items-center gap-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-primary" /> Revenue</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-info" /> Orders</span>
+          </div>
+        </div>
         <ResponsiveContainer width="100%" height={260}>
           <AreaChart data={monthlySales} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
             <defs>
@@ -301,20 +309,26 @@ export default function ReportsPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto border rounded-xl overflow-hidden">
           <table className="data-table">
             <thead>
-              <tr><th>Product</th><th>Seller</th><th>Quantity Sold</th><th>Revenue</th><th>Growth</th></tr>
+              <tr>
+                <th className="text-left">Product</th>
+                <th className="text-left">Seller</th>
+                <th className="text-right">Quantity Sold</th>
+                <th className="text-right">Revenue</th>
+                <th className="text-center">Growth</th>
+              </tr>
             </thead>
             <tbody>
               {filteredProducts.map((s) => (
                 <tr key={s.item}>
-                  <td className="font-medium text-card-foreground">{s.item}</td>
-                  <td className="text-muted-foreground">{s.seller}</td>
-                  <td className="text-card-foreground">{s.qty}</td>
-                  <td className="font-medium text-card-foreground">{s.value}</td>
-                  <td>
-                    <span className={s.growth.startsWith("+") ? "text-success text-xs font-medium" : "text-destructive text-xs font-medium"}>
+                  <td className="font-semibold text-card-foreground text-left">{s.item}</td>
+                  <td className="text-muted-foreground text-left">{s.seller}</td>
+                  <td className="text-card-foreground font-medium text-right">{s.qty}</td>
+                  <td className="font-bold text-card-foreground text-right">{s.value}</td>
+                  <td className="text-center">
+                    <span className={s.growth.startsWith("+") ? "badge-success text-[10px]" : "badge-danger text-[10px]"}>
                       {s.growth}
                     </span>
                   </td>

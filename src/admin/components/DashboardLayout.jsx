@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
-import { DashboardSidebar } from "@/admin/components/DashboardSidebar";
-import { DashboardHeader } from "@/admin/components/DashboardHeader";
-import { cn } from "@/lib/utils";
-import { AdminSearchProvider } from "@/admin/contexts/AdminSearchContext";
-import { ThemeProvider } from "@/components/ThemeProvider";
+import { DashboardSidebar } from "./DashboardSidebar";
+import { DashboardHeader } from "./DashboardHeader";
+import { cn } from "../../lib/utils";
+import { AdminSearchProvider } from "../contexts/AdminSearchContext";
+import { ThemeProvider } from "../../components/common/ThemeProvider";
 import { useEffect } from "react";
 
 export function DashboardLayout() {

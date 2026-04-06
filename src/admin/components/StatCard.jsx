@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/utils";
 import { ArrowUp, ArrowDown } from "lucide-react";
 
 export function StatCard({ title, value, todayValue, change, changeType = "neutral", icon: Icon, iconColor }) {

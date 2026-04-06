@@ -1,59 +1,34 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ArrowLeft, Upload, X, Plus } from "lucide-react";
-import { useLocalProducts } from "@/hooks/useLocalProducts";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { ArrowLeft, Upload, X, Plus, Image as ImageIcon, CheckCircle2, AlertCircle, ShoppingBasket } from "lucide-react";
+import { useProducts } from "../../contexts/ProductContext";
+import { useToast } from "../../hooks/use-toast";
 
-const categoryOptions = ["Sarees", "Bridal", "Lehengas", "Indo-Western", "Jewellery"];
+const categoryOptions = ["Fresh Vegetables", "Fresh Fruits", "Dairy & Eggs", "Breads & Bakery", "Beverages", "Snacks"];
 
 const subcategoryOptions = {
-  Sarees:         ["Banarasi", "Kanjivaram", "Chiffon", "Silk", "Cotton"],
-  Bridal:         ["Wedding Lehenga", "Bridal Saree", "Reception Gown", "Engagement Outfit", "Bridal Dupatta"],
-  Lehengas:       ["Bridal Lehenga", "Party Wear", "Festive", "A-Line", "Flared"],
-  "Indo-Western": ["Gown", "Fusion Saree", "Crop Top Lehenga", "Dhoti Set", "Cape Dress"],
-  Jewellery:      ["Necklace Set", "Earrings", "Bangles", "Maang Tikka", "Anklet"],
+  "Fresh Vegetables": ["Root", "Leafy Greens", "Cruciferous", "Marrows"],
+  "Fresh Fruits":     ["Citrus", "Berries", "Tropical", "Melons"],
+  "Dairy & Eggs":     ["Milk", "Cheese", "Yogurt", "Eggs"],
+  "Breads & Bakery":  ["Breads", "Pastries", "Cakes", "Cookies"],
+  "Beverages":        ["Juices", "Tea", "Coffee", "Water", "Soft Drinks"],
+  "Snacks":           ["Chips", "Nuts", "Chocolates", "Popcorn"],
 };
 
-const fabricOptions = {
-  Sarees:         ["Silk", "Cotton", "Georgette", "Chiffon", "Banarasi Silk"],
-  Bridal:         ["Velvet", "Silk", "Net", "Satin", "Organza"],
-  Lehengas:       ["Net", "Silk", "Velvet", "Georgette", "Art Silk"],
-  "Indo-Western": ["Crepe", "Georgette", "Satin", "Cotton Blend", "Lycra"],
-  Jewellery:      [],
-};
+const unitOptions = ["1 kg", "500 g", "250 g", "100 g", "1 pc", "1 Pack", "1 Liter", "500 ml", "1 Dozen"];
 
-const workOptions = {
-  Sarees:         ["Zari", "Embroidery", "Sequins", "Printed", "Hand Painted"],
-  Bridal:         ["Zardozi", "Stone Work", "Kundan", "Resham", "Gota Patti"],
-  Lehengas:       ["Mirror Work", "Thread Work", "Sequins", "Embroidery", "Zari"],
-  "Indo-Western": ["Embroidery", "Printed", "Sequins", "Lace", "Applique"],
-  Jewellery:      ["Kundan", "Meenakari", "Temple", "Polki", "Antique"],
-};
-
-const patternOptions = {
-  Sarees:         ["Woven", "Floral", "Paisley", "Geometric", "Traditional"],
-  Bridal:         ["Embellished", "Floral", "Traditional", "Paisley", "Abstract"],
-  Lehengas:       ["Floral", "Geometric", "Paisley", "Solid", "Abstract"],
-  "Indo-Western": ["Solid", "Printed", "Abstract", "Geometric", "Striped"],
-  Jewellery:      ["Traditional", "Contemporary", "Floral", "Geometric", "Temple"],
-};
-
-const colorOptions = ["Red", "Blue", "Green", "Yellow", "Pink", "Purple", "Orange", "Black", "White", "Gold", "Silver", "Maroon", "Navy", "Teal", "Peach", "Beige"];
-const sizeOptions   = ["Free Size", "XS", "S", "M", "L", "XL", "XXL", "Custom"];
-
-const selectClass = "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const selectClass = "flex h-12 w-full rounded-xl border border-input bg-background/50 px-4 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary transition-all duration-200";
 
 export default function AddProductPage() {
   const navigate = useNavigate();
-  const { addProduct, clearAllProducts } = useLocalProducts();
+  const { addProduct, clearAllProducts } = useProducts();
   const { toast } = useToast();
 
   const [form, setForm] = useState({
-    name: "", sku: "", seller: "", category: "Sarees", subCategory: "", price: "", mrp: "", stock: "",
-    description: "", fabric: "", color: "", work: "", pattern: "",
-    sizes: ["Free Size"], images: [], readyToShip: false, featured: false,
+    name: "", sku: "", seller: "FreshBasket", category: "Fresh Vegetables", subCategory: "", price: "", mrp: "", stock: "",
+    description: "", unit: "1 kg", images: [], featured: false,
   });
   const [errors,     setErrors]     = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -66,14 +41,7 @@ export default function AddProductPage() {
 
   const handleCategoryChange = (e) => {
     handleChange(e);
-    setForm((p) => ({ ...p, subCategory: "", fabric: "", work: "", pattern: "" }));
-  };
-
-  const toggleSize = (size) => {
-    setForm((p) => ({
-      ...p,
-      sizes: p.sizes.includes(size) ? p.sizes.filter((s) => s !== size) : [...p.sizes, size],
-    }));
+    setForm((p) => ({ ...p, subCategory: "" }));
   };
 
   const handleImageUpload = (e) => {
@@ -95,18 +63,14 @@ export default function AddProductPage() {
 
   const validate = () => {
     const errs = {};
-    if (!form.name.trim())                               errs.name        = "Required";
-    if (!form.sku.trim())                                errs.sku         = "Required";
-    if (!form.seller.trim())                             errs.seller      = "Required";
-    if (!form.subCategory)                               errs.subCategory = "Required";
-    if (!form.price || Number(form.price) <= 0)          errs.price       = "Required";
-    if (!form.mrp   || Number(form.mrp)   <= 0)          errs.mrp         = "Required";
-    if (Number(form.price) > Number(form.mrp))           errs.price       = "Price must be ≤ MRP";
-    if (!form.stock && form.stock !== "0")               errs.stock       = "Required";
-    if (form.images.length === 0)                        errs.images      = "At least one image required";
-    if (!form.description.trim())                        errs.description = "Required";
-    if (form.category !== "Jewellery" && !form.fabric)   errs.fabric      = "Required";
-    if (!form.color)                                     errs.color       = "Required";
+    if (!form.name.trim())                               errs.name        = "Product name is required";
+    if (!form.subCategory)                               errs.subCategory = "Please select a subcategory";
+    if (!form.price || Number(form.price) <= 0)          errs.price       = "Valid price required";
+    if (!form.mrp   || Number(form.mrp)   <= 0)          errs.mrp         = "MRP is required";
+    if (Number(form.price) > Number(form.mrp))           errs.price       = "Price cannot exceed MRP";
+    if (!form.stock && form.stock !== "0")               errs.stock       = "Stock count required";
+    if (form.images.length === 0)                        errs.images      = "Upload at least one product image";
+    if (!form.description.trim())                        errs.description = "Description is required";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -123,267 +87,252 @@ export default function AddProductPage() {
 
     const product = {
       id:            `local-${Date.now()}`,
-      sku:           form.sku.trim() || `SKU-${Date.now()}`,
+      sku:           form.sku.trim() || `GRO-${Date.now()}`,
       name:          form.name.trim(),
       seller:        form.seller.trim(),
       category:      form.category,
       subCategory:   form.subCategory,
       price,
-      originalPrice: mrp,
       mrp,
       stock:         Number(form.stock),
       description:   form.description.trim(),
       image:         form.images[0],
       images:        form.images,
       discount,
-      fabric:        form.fabric,
-      color:         form.color,
-      work:          form.work    || "None",
-      pattern:       form.pattern || "Solid",
-      sizes:         form.sizes,
-      readyToShip:   form.readyToShip,
+      unit:          form.unit,
+      rating:        4.5,
       featured:      form.featured,
       isNew:         true,
-      isExclusive:   false,
-      tags:          [],
     };
 
-    // addProduct is now async (compresses images before storing)
     const result = await addProduct(product);
-
     setSubmitting(false);
 
     if (result.ok) {
-      toast({ title: "✅ Product added!", description: `${product.name} has been added successfully.` });
+      toast({ title: "✅ Product Live!", description: `${product.name} is now available in the store.` });
       navigate("/admin/products");
       return;
     }
 
-    if (result.reason === "duplicate") {
-      toast({ title: "Duplicate product", description: "A product with this ID already exists.", variant: "destructive" });
-      return;
-    }
-
     if (result.reason === "quota") {
-      // Storage is full — offer to clear old products
-      const confirmClear = window.confirm(
-        `⚠️ Storage is full (${result.usedKB} KB used).\n\n` +
-        `This happens because product images are stored in the browser.\n\n` +
-        `Click OK to clear previously added products and try again, or Cancel to keep them.`
-      );
-      if (confirmClear) {
+      if (window.confirm("Browser storage is full. Clear old products to continue?")) {
         clearAllProducts();
-        toast({ title: "Storage cleared", description: "Previous products removed. Please add the product again." });
-      } else {
-        toast({
-          title: "Storage full",
-          description: "Try using smaller images (under 500KB each) or clear browser storage.",
-          variant: "destructive",
-        });
+        toast({ title: "Storage Cleared", description: "Please try adding the product again." });
       }
       return;
     }
 
-    toast({ title: "Error", description: "Could not save product. Please try again.", variant: "destructive" });
+    toast({ title: "Error", description: "Could not save. Try using smaller images.", variant: "destructive" });
   };
 
   const currentSubcategories = subcategoryOptions[form.category] || [];
 
   return (
-    <div className="space-y-5 max-w-3xl">
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate("/admin/products")} className="p-2 hover:bg-secondary rounded-lg">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div>
-          <h1 className="text-lg font-semibold text-foreground">Add New Product</h1>
-          <p className="text-sm text-muted-foreground">Create a new product listing for the store</p>
+    <div className="max-w-[1200px] mx-auto pb-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-4">
+          <button onClick={() => navigate("/admin/products")} className="h-10 w-10 flex items-center justify-center hover:bg-secondary rounded-xl transition-colors border border-border shadow-sm">
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Add Fresh Item</h1>
+            <p className="text-muted-foreground">List a new grocery product to the marketplace</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+           <Button variant="outline" onClick={() => navigate("/admin/products")}>Discard</Button>
+           <Button onClick={handleSubmit} disabled={submitting} className="px-8 border border-primary/20">
+             {submitting ? "Processing..." : "Publish Product"}
+           </Button>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Info */}
-        <div className="border border-border rounded-lg p-5 space-y-4 bg-card">
-          <h3 className="text-base font-semibold text-foreground">Basic Information</h3>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Product Name *</label>
-            <Input name="name" value={form.name} onChange={handleChange} placeholder="e.g. Red Silk Banarasi Saree" />
-            {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">SKU *</label>
-              <Input name="sku" value={form.sku} onChange={handleChange} placeholder="e.g. TD-SAREE-001" />
-              {errors.sku && <p className="text-xs text-destructive mt-1">{errors.sku}</p>}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Side: Form Logic */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* General Information */}
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-6 pb-4 border-b border-border">
+              <ShoppingBasket className="w-5 h-5 text-primary" />
+              <h3 className="font-bold text-lg">Product Details</h3>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Seller Name *</label>
-              <Input name="seller" value={form.seller} onChange={handleChange} placeholder="e.g. Trendy Drapes Store" />
-              {errors.seller && <p className="text-xs text-destructive mt-1">{errors.seller}</p>}
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Category *</label>
-              <select name="category" value={form.category} onChange={handleCategoryChange} className={selectClass}>
-                {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Subcategory *</label>
-              <select name="subCategory" value={form.subCategory} onChange={handleChange} className={selectClass}>
-                <option value="">Select subcategory</option>
-                {currentSubcategories.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-              {errors.subCategory && <p className="text-xs text-destructive mt-1">{errors.subCategory}</p>}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Description *</label>
-            <textarea
-              name="description" value={form.description} onChange={handleChange} rows={3}
-              placeholder="Describe the product..."
-              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-            {errors.description && <p className="text-xs text-destructive mt-1">{errors.description}</p>}
-          </div>
-        </div>
-
-        {/* Pricing */}
-        <div className="border border-border rounded-lg p-5 space-y-4 bg-card">
-          <h3 className="text-base font-semibold text-foreground">Pricing & Inventory</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Price (₹) *</label>
-              <Input name="price" type="number" min="0" value={form.price} onChange={handleChange} placeholder="12999" />
-              {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">MRP (₹) *</label>
-              <Input name="mrp" type="number" min="0" value={form.mrp} onChange={handleChange} placeholder="18999" />
-              {errors.mrp && <p className="text-xs text-destructive mt-1">{errors.mrp}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Stock *</label>
-              <Input name="stock" type="number" min="0" value={form.stock} onChange={handleChange} placeholder="50" />
-              {errors.stock && <p className="text-xs text-destructive mt-1">{errors.stock}</p>}
-            </div>
-          </div>
-          {form.price && form.mrp && Number(form.mrp) > 0 && (
-            <div className="bg-secondary rounded-md px-4 py-2.5">
-              <span className="text-sm text-muted-foreground">Discount: </span>
-              <span className="text-sm font-semibold text-accent">
-                {Math.round(((Number(form.mrp) - Number(form.price)) / Number(form.mrp)) * 100)}% OFF
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Product Details */}
-        <div className="border border-border rounded-lg p-5 space-y-4 bg-card">
-          <h3 className="text-base font-semibold text-foreground">Product Details</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {form.category !== "Jewellery" && (
+            
+            <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Fabric *</label>
-                <select name="fabric" value={form.fabric} onChange={handleChange} className={selectClass}>
-                  <option value="">Select fabric</option>
-                  {(fabricOptions[form.category] || []).map((f) => <option key={f} value={f}>{f}</option>)}
-                </select>
-                {errors.fabric && <p className="text-xs text-destructive mt-1">{errors.fabric}</p>}
+                <label className="text-sm font-semibold mb-1.5 block">Product Name *</label>
+                <Input 
+                  name="name" value={form.name} onChange={handleChange} 
+                  placeholder="e.g. Organic Cavendish Bananas" 
+                  className="h-12 rounded-xl"
+                />
+                {errors.name && <p className="text-xs text-destructive mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.name}</p>}
               </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Color *</label>
-              <select name="color" value={form.color} onChange={handleChange} className={selectClass}>
-                <option value="">Select color</option>
-                {colorOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-              {errors.color && <p className="text-xs text-destructive mt-1">{errors.color}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Work</label>
-              <select name="work" value={form.work} onChange={handleChange} className={selectClass}>
-                <option value="">Select work type</option>
-                {(workOptions[form.category] || []).map((w) => <option key={w} value={w}>{w}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Pattern</label>
-              <select name="pattern" value={form.pattern} onChange={handleChange} className={selectClass}>
-                <option value="">Select pattern</option>
-                {(patternOptions[form.category] || []).map((p) => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Available Sizes</label>
-            <div className="flex flex-wrap gap-2">
-              {sizeOptions.map((size) => (
-                <button key={size} type="button" onClick={() => toggleSize(size)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                    form.sizes.includes(size)
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-foreground border-border hover:bg-secondary"
-                  }`}>
-                  {size}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
 
-        {/* Images */}
-        <div className="border border-border rounded-lg p-5 space-y-4 bg-card">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-foreground">Product Images *</h3>
-            <p className="text-xs text-muted-foreground">Images are auto-compressed before saving</p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {form.images.map((img, i) => (
-              <div key={i} className="relative w-24 h-28 rounded-md overflow-hidden border border-border bg-secondary group">
-                <img src={img} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
-                <button type="button" onClick={() => removeImage(i)}
-                  className="absolute top-1 right-1 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <X className="w-3 h-3" />
-                </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                   <label className="text-sm font-semibold mb-1.5 block">Category *</label>
+                   <select name="category" value={form.category} onChange={handleCategoryChange} className={selectClass}>
+                     {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+                   </select>
+                </div>
+                <div>
+                   <label className="text-sm font-semibold mb-1.5 block">Subcategory *</label>
+                   <select name="subCategory" value={form.subCategory} onChange={handleChange} className={selectClass}>
+                     <option value="">Select Option</option>
+                     {currentSubcategories.map((s) => <option key={s} value={s}>{s}</option>)}
+                   </select>
+                   {errors.subCategory && <p className="text-xs text-destructive mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.subCategory}</p>}
+                </div>
               </div>
-            ))}
-            <label className="w-24 h-28 rounded-md border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-secondary/50 transition-colors">
-              <Upload className="w-5 h-5 text-muted-foreground mb-1" />
-              <span className="text-[10px] text-muted-foreground">Add Image</span>
-              <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
-            </label>
+
+              <div>
+                <label className="text-sm font-semibold mb-1.5 block">Description *</label>
+                <textarea
+                  name="description" value={form.description} onChange={handleChange} rows={4}
+                  placeholder="Tell customers about the freshness, farm source, and benefits..."
+                  className="flex min-h-[120px] w-full rounded-xl border border-input bg-background/50 px-4 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary transition-all transition-duration-200"
+                />
+                {errors.description && <p className="text-xs text-destructive mt-1.5 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.description}</p>}
+              </div>
+            </div>
           </div>
-          {errors.images && <p className="text-xs text-destructive mt-1">{errors.images}</p>}
+
+          {/* Pricing & Logistics */}
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-6 pb-4 border-b border-border">
+              <ImageIcon className="w-5 h-5 text-primary" />
+              <h3 className="font-bold text-lg">Images & Inventory</h3>
+            </div>
+
+            <div className="space-y-6">
+              <div>
+                <label className="text-sm font-semibold mb-3 block">Upload Product Images *</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {form.images.map((img, i) => (
+                    <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-border bg-muted group shadow-sm">
+                      <img src={img} alt="Preview" className="w-full h-full object-cover" />
+                      <button type="button" onClick={() => removeImage(i)}
+                        className="absolute top-2 right-2 w-7 h-7 bg-destructive/90 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  {form.images.length < 4 && (
+                    <label className="aspect-square rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all duration-300 group">
+                      <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                        <Upload className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
+                      </div>
+                      <span className="text-xs font-semibold text-muted-foreground group-hover:text-primary">Add Image</span>
+                      <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
+                    </label>
+                  )}
+                </div>
+                {errors.images && <p className="text-xs text-destructive mt-3 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.images}</p>}
+              </div>
+
+              <div className="h-px bg-border" />
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <div>
+                  <label className="text-sm font-semibold mb-1.5 block">Sell Price (₹) *</label>
+                  <Input name="price" type="number" value={form.price} onChange={handleChange} placeholder="99" className="h-12 rounded-xl" />
+                  {errors.price && <p className="text-xs text-destructive mt-1.5">{errors.price}</p>}
+                </div>
+                <div>
+                  <label className="text-sm font-semibold mb-1.5 block">MRP (₹) *</label>
+                  <Input name="mrp" type="number" value={form.mrp} onChange={handleChange} placeholder="120" className="h-12 rounded-xl" />
+                  {errors.mrp && <p className="text-xs text-destructive mt-1.5">{errors.mrp}</p>}
+                </div>
+                <div>
+                  <label className="text-sm font-semibold mb-1.5 block">Stock Quantity *</label>
+                  <Input name="stock" type="number" value={form.stock} onChange={handleChange} placeholder="100" className="h-12 rounded-xl" />
+                  {errors.stock && <p className="text-xs text-destructive mt-1.5">{errors.stock}</p>}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold mb-1.5 block">Unit/Weight Range *</label>
+                <div className="flex flex-wrap gap-2">
+                  {unitOptions.map((u) => (
+                    <button key={u} type="button" onClick={() => setForm(p => ({ ...p, unit: u }))}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${
+                        form.unit === u
+                          ? "bg-primary text-primary-foreground border-primary shadow-md scale-105"
+                          : "bg-background text-foreground border-border hover:border-primary/50 hover:bg-secondary"
+                      }`}>
+                      {u}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Options */}
-        <div className="border border-border rounded-lg p-5 space-y-4 bg-card">
-          <h3 className="text-base font-semibold text-foreground">Options</h3>
-          <div className="flex flex-col sm:flex-row gap-6">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" name="readyToShip" checked={form.readyToShip} onChange={handleChange}
-                className="w-4 h-4 rounded border-input text-primary focus:ring-primary" />
-              <span className="text-sm text-foreground">Ready to Ship</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" name="featured" checked={form.featured} onChange={handleChange}
-                className="w-4 h-4 rounded border-input text-primary focus:ring-primary" />
-              <span className="text-sm text-foreground">Featured Product</span>
-            </label>
+        {/* Right Side: Quick Preview & Options */}
+        <div className="space-y-6">
+          {/* Card Preview */}
+          <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm sticky top-4">
+            <div className="p-4 bg-secondary/50 border-b border-border">
+              <h3 className="text-sm font-bold flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Store Preview</h3>
+            </div>
+            <div className="p-6 flex justify-center bg-dots">
+              <div className="w-full max-w-[240px] bg-white rounded-2xl shadow-xl overflow-hidden border border-border transition-all hover:translate-y-[-5px]">
+                <div className="relative aspect-[4/5] bg-secondary">
+                  {form.images[0] ? (
+                    <img src={form.images[0]} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                      <ImageIcon className="w-10 h-10 opacity-20" />
+                    </div>
+                  )}
+                  {form.price && form.mrp && Number(form.mrp) > Number(form.price) && (
+                    <div className="absolute top-2 left-2 bg-accent text-white text-[10px] font-bold px-2 py-1 rounded-lg">
+                      {Math.round(((form.mrp - form.price) / form.mrp) * 100)}% OFF
+                    </div>
+                  )}
+                </div>
+                <div className="p-4 space-y-2">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-primary">{form.category}</div>
+                  <h4 className="font-bold text-sm truncate">{form.name || "Product Title"}</h4>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-lg">₹{form.price || "0"}</span>
+                    {form.mrp && <span className="text-[10px] text-muted-foreground line-through">₹{form.mrp}</span>}
+                    <span className="text-[10px] text-muted-foreground">/ {form.unit}</span>
+                  </div>
+                  <button className="w-full h-9 rounded-xl bg-primary/10 text-primary text-xs font-bold hover:bg-primary hover:text-white transition-all">
+                    Add To Cart
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6 border-t border-border space-y-4">
+              <label className="flex items-center gap-3 p-3 rounded-xl border border-border bg-background hover:bg-secondary transition-all cursor-pointer group">
+                <div className="relative flex items-center">
+                  <input type="checkbox" name="featured" checked={form.featured} onChange={handleChange}
+                    className="w-5 h-5 rounded-md border-input text-primary focus:ring-primary cursor-pointer" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold group-hover:text-primary transition-colors">Featured Item</span>
+                  <span className="text-[10px] text-muted-foreground">Show in recommended sections</span>
+                </div>
+                {form.featured && <CheckCircle2 className="w-4 h-4 text-primary ml-auto" />}
+              </label>
+
+              <div className="bg-primary/5 rounded-xl p-4 border border-primary/10">
+                <div className="flex items-start gap-3">
+                   <CheckCircle2 className="w-4 h-4 text-primary mt-0.5" />
+                   <div>
+                     <p className="text-xs font-bold text-primary mb-1">Visibility Status</p>
+                     <p className="text-[10px] text-primary/60 leading-relaxed">Once published, this product will be immediately discoverable in the shop category.</p>
+                   </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        <Button type="submit" className="w-full" disabled={submitting}>
-          {submitting
-            ? <><span className="animate-spin mr-2 inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full" />Saving & compressing images...</>
-            : <><Plus className="w-4 h-4 mr-2" />Add Product</>
-          }
-        </Button>
-      </form>
+      </div>
     </div>
   );
 }

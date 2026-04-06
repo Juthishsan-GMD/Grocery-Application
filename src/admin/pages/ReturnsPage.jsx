@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { StatCard } from "@/admin/components/StatCard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { StatCard } from "../../admin/components/StatCard";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { Search, RotateCcw, AlertTriangle, CheckCircle, XCircle, Banknote, ListCollapse } from "lucide-react";
 
 const returnsData = [
@@ -77,12 +77,12 @@ export default function ReturnsPage() {
               {filteredReturns.map((r) => (
                 <tr key={r.id}>
                   <td className="font-semibold text-card-foreground text-left">{r.id}</td>
-                  <td className="text-muted-foreground text-left hover:underline cursor-pointer hover:text-primary">{r.orderId}</td>
-                  <td className="font-medium text-card-foreground text-left">{r.customer}</td>
+                  <td className="text-muted-foreground text-left font-mono text-[11px] hover:text-primary cursor-pointer transition-colors shadow-none">{r.orderId}</td>
+                  <td className="font-bold text-card-foreground text-left">{r.customer}</td>
                   <td className="text-left">
                     <div className="flex items-center gap-1.5">
-                      <ListCollapse className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-card-foreground text-sm">{r.reason}</span>
+                      <ListCollapse className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-card-foreground text-[13px]">{r.reason}</span>
                     </div>
                   </td>
                   <td className="text-card-foreground font-bold text-right">{r.amount}</td>
@@ -93,21 +93,21 @@ export default function ReturnsPage() {
                     <div className="flex items-center justify-center gap-2">
                       {r.status === "Pending" && (
                         <>
-                          <Button size="sm" className="h-7 text-xs px-2 gap-1 bg-green-600 hover:bg-green-700" onClick={() => handleAction(r.id, "Approved")}>
+                          <Button size="sm" className="h-8 text-[11px] px-2.5 gap-1.5 font-bold shadow-sm" onClick={() => handleAction(r.id, "Approved")}>
                             <CheckCircle className="h-3 w-3" /> Approve
                           </Button>
-                          <Button size="sm" variant="destructive" className="h-7 text-xs px-2 gap-1" onClick={() => handleAction(r.id, "Rejected")}>
+                          <Button size="sm" variant="outline" className="h-8 text-[11px] px-2.5 gap-1.5 text-destructive border-destructive hover:bg-destructive hover:text-white" onClick={() => handleAction(r.id, "Rejected")}>
                             <XCircle className="h-3 w-3" /> Reject
                           </Button>
                         </>
                       )}
                       {r.status === "Approved" && (
-                        <Button size="sm" variant="secondary" className="h-7 text-xs px-2 gap-1" onClick={() => handleAction(r.id, "Refunded")}>
+                        <Button size="sm" className="h-8 text-[11px] px-2.5 gap-1.5 font-bold bg-primary hover:bg-primary-hover shadow-sm text-white" onClick={() => handleAction(r.id, "Refunded")}>
                           <Banknote className="h-3 w-3" /> Initiate Refund
                         </Button>
                       )}
                       {(r.status === "Refunded" || r.status === "Rejected") && (
-                        <span className="text-xs text-muted-foreground font-medium">No actions available</span>
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Processed</span>
                       )}
                     </div>
                   </td>

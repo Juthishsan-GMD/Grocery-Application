@@ -1,17 +1,18 @@
-import { useState, useEffect } from "react";
+// ProductsPage – managed via ProductContext
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { Search, Plus, Package, Star, Eye, Edit, Trash2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { getAllProducts, deleteProduct } from "@/lib/productStorage";
+import { useProducts } from "../../contexts/ProductContext";
 
 const categoryStock = [
-  { name: "Electronics", products: 3420, active: 3180 },
-  { name: "Fashion", products: 4200, active: 3950 },
-  { name: "Home", products: 2100, active: 1980 },
-  { name: "Beauty", products: 1800, active: 1720 },
-  { name: "Sports", products: 1320, active: 1210 },
+  { name: "Vegetables", products: 120, active: 110, color: '#10b981' },
+  { name: "Fruits", products: 85, active: 80, color: '#fbbf24' },
+  { name: "Dairy", products: 45, active: 42, color: '#3b82f6' },
+  { name: "Bakery", products: 30, active: 28, color: '#d97706' },
+  { name: "Beverages", products: 60, active: 55, color: '#ef4444' },
+  { name: "Snacks", products: 50, active: 48, color: '#a855f7' },
 ];
 
 const statusStyle = {
@@ -20,12 +21,10 @@ const statusStyle = {
 
 export default function ProductsPage() {
   const navigate = useNavigate();
-  const [products, setProducts] = useState([]);
-
-  useEffect(() => {
-    // Load products from localStorage
-    setProducts(getAllProducts());
-  }, []);
+  const { products: allProducts, removeProduct, updateProduct } = useProducts();
+  
+  // No need for local state, use context directly
+  const products = allProducts;
 
   // Determine status based on stock
   const getStatus = (product) => {
@@ -39,8 +38,7 @@ export default function ProductsPage() {
 
   const handleDelete = (id) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
-      deleteProduct(id);
-      setProducts(getAllProducts());
+      removeProduct(id);
     }
   };
 
@@ -49,20 +47,12 @@ export default function ProductsPage() {
   };
 
   const handleEdit = (product) => {
-    // For now, show a simple edit dialog. In a real app, you'd navigate to an edit page
     const newName = prompt("Edit product name:", product.name);
     if (newName && newName !== product.name) {
-      const newPrice = prompt("Edit price:", product.price);
-      const newStock = prompt("Edit stock:", product.stock.toString());
-      if (newPrice && newStock) {
-        const newSeller = prompt("Edit seller name:", product.seller || "");
-        const updatedProducts = products.map(p =>
-          p.id === product.id
-            ? { ...p, name: newName, price: newPrice, stock: parseInt(newStock), seller: newSeller || p.seller }
-            : p
-        );
-        setProducts(updatedProducts);
-        localStorage.setItem("products", JSON.stringify(updatedProducts));
+      const newPrice = Number(prompt("Edit price:", product.price));
+      const newStock = Number(prompt("Edit stock:", product.stock.toString()));
+      if (!isNaN(newPrice) && !isNaN(newStock)) {
+        updateProduct(product.id, { name: newName, price: newPrice, stock: newStock });
         alert("Product updated successfully!");
       }
     }
@@ -78,90 +68,119 @@ export default function ProductsPage() {
         <Button onClick={() => navigate("/admin/products/add")}><Plus className="h-4 w-4 mr-2" />Add Product</Button>
       </div>
 
-      {/* Category Stock Chart */}
-      <div className="chart-card">
-        <h3 className="chart-title">Products by Category</h3>
-        <p className="chart-subtitle mb-3">Total vs active listings per category</p>
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={categoryStock} margin={{ top: 0, right: 10, left: -10, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 13%, 91%)" />
-            <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(220, 9%, 46%)" />
-            <YAxis tick={{ fontSize: 11 }} stroke="hsl(220, 9%, 46%)" />
-            <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-            <Bar dataKey="products" name="Total" fill="hsl(220, 14%, 80%)" radius={[3, 3, 0, 0]} />
-            <Bar dataKey="active" name="Active" fill="hsl(25, 95%, 53%)" radius={[3, 3, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+      {/* Category Stock Chart Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+        <div className="chart-card bg-card border border-border rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-bold text-foreground">Stock Overview by Category</h3>
+              <p className="text-sm text-muted-foreground">Monitoring active inventory across all departments</p>
+            </div>
+            <div className="flex gap-4 text-xs font-medium">
+               <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-primary/20"></span> Total</div>
+               <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-accent"></span> Active</div>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={categoryStock} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 500 }} stroke="hsl(var(--muted-foreground))" />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+              <Tooltip 
+                cursor={{ fill: 'hsl(var(--secondary))', opacity: 0.4 }}
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+              />
+              <Bar dataKey="products" name="Total Products" fill="hsl(var(--primary) / 0.15)" radius={[6, 6, 0, 0]} barSize={40} />
+              <Bar dataKey="active" name="Active Listings" fill="var(--primary)" radius={[6, 6, 0, 0]} barSize={40} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
 
 
-      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+      {/* Products Table Section */}
+      <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search fresh items..." className="pl-10 h-10 rounded-xl" />
+          </div>
+          <div className="flex items-center gap-3">
+             <Button variant="outline" className="h-10 rounded-xl px-4"><Package className="w-4 h-4 mr-2" /> Export CSV</Button>
+          </div>
+        </div>
+        
         <div className="overflow-x-auto">
-          <table className="data-table">
+          <table className="w-full">
             <thead>
-              <tr>
-                <th className="w-[25%] text-left">Product</th>
-                <th className="w-[12%] text-left">Category</th>
-                <th className="w-[15%] text-left">Seller</th>
-                <th className="w-[10%] text-right">Price</th>
-                <th className="w-[8%] text-right">Stock</th>
-                <th className="w-[8%] text-right">Sold</th>
-                <th className="w-[8%] text-center">Rating</th>
-                <th className="w-[10%] text-center">Status</th>
-                <th className="w-[12%] text-right">Actions</th>
+              <tr className="bg-secondary/30">
+                <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-[30%] text-left">Product Detail</th>
+                <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground w-[15%] text-left">Category</th>
+                <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground w-[12%] text-right">Price</th>
+                <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground w-[10%] text-right">Inventory</th>
+                <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider text-muted-foreground w-[10%] text-center">Status</th>
+                <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider text-muted-foreground w-[8%] text-center">Unit</th>
+                <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground w-[15%] text-right">Control</th>
               </tr>
             </thead>
-            <tbody>
-              {filtered.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <div className="flex items-center gap-2.5">
-                      {/* Show actual image if it looks like a URL or base64, else show emoji/icon */}
-                      {p.image && (p.image.startsWith("http") || p.image.startsWith("data:") || p.image.startsWith("/")) ? (
-                        <img
-                          src={p.image}
-                          alt={p.name}
-                          className="w-12 h-12 object-cover rounded-md border border-border flex-shrink-0"
-                          onError={(e) => { e.currentTarget.style.display = "none"; e.currentTarget.nextSibling.style.display = "flex"; }}
-                        />
-                      ) : (
-                        <span className="w-12 h-12 rounded-md border border-border bg-secondary flex items-center justify-center text-lg flex-shrink-0">
-                          {p.image || <Package className="h-5 w-5 text-muted-foreground" />}
-                        </span>
-                      )}
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-medium text-card-foreground text-sm truncate" title={p.name}>{p.name}</span>
-                        <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-tight">{p.sku || `NO-SKU-${p.id}`}</span>
+            <tbody className="divide-y divide-border">
+              {filtered.map((p) => {
+                 const status = getStatus(p);
+                 return (
+                  <tr key={p.id} className="hover:bg-secondary/20 transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-xl border border-border overflow-hidden bg-secondary flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                          {p.image && (p.image.startsWith("http") || p.image.startsWith("data:") || p.image.startsWith("/")) ? (
+                            <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xl bg-primary/5">{p.image || "🍏"}</div>
+                          )}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-bold text-sm text-foreground truncate">{p.name}</span>
+                          <span className="text-[10px] font-mono text-muted-foreground mt-0.5 uppercase tracking-wide">{p.sku || `GRO-${p.id.toString().slice(-4)}`}</span>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="text-muted-foreground text-left">{p.category}</td>
-                  <td className="text-card-foreground text-left">{p.seller}</td>
-                  <td className="text-right">
-                    <div className="flex flex-col items-end">
-                      <span className="font-medium text-card-foreground">₹{Number(p.price || 0).toLocaleString("en-IN")}</span>
-                      <span className="text-[10px] text-muted-foreground line-through">₹{Number(p.mrp || 0).toLocaleString("en-IN")}</span>
-                    </div>
-                  </td>
-                  <td className="text-card-foreground text-right">{p.stock.toLocaleString()}</td>
-                  <td className="text-card-foreground text-right">₹{Number(p.price ?? 0).toLocaleString("en-IN")}</td>
-                  <td>
-                    <div className="flex items-center justify-center gap-1">
-                      <Star className="h-3 w-3 text-warning fill-warning" />
-                      <span className="text-xs font-medium text-card-foreground">{p.rating}</span>
-                    </div>
-                  </td>
-                  <td className="text-center"><span className={statusStyle[p.status]}>{p.status}</span></td>
-                  <td>
-                    <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => handleView(p)} className="rounded p-1.5 hover:bg-secondary transition-colors" title="View"><Eye className="h-4 w-4 text-muted-foreground" /></button>
-                      <button onClick={() => handleEdit(p)} className="rounded p-1.5 hover:bg-secondary transition-colors" title="Edit"><Edit className="h-4 w-4 text-muted-foreground" /></button>
-                      <button onClick={() => handleDelete(p.id)} className="rounded p-1.5 hover:bg-secondary transition-colors" title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-primary/5 text-primary border border-primary/10">
+                        {p.category}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-sm">₹{Number(p.price || 0).toFixed(2)}</span>
+                        {p.mrp > p.price && <span className="text-[10px] text-muted-foreground line-through">₹{p.mrp}</span>}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                       <span className={`font-bold text-sm ${p.stock < 10 ? 'text-destructive' : 'text-foreground'}`}>{p.stock}</span>
+                       <span className="text-[10px] text-muted-foreground ml-1">in stock</span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold shadow-sm ${
+                         status === 'Active' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' :
+                         status === 'Low Stock' ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' :
+                         'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+                       }`}>
+                         {status}
+                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                       <span className="text-xs font-medium text-muted-foreground">{p.unit || '1 pc'}</span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button onClick={() => handleView(p)} className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-secondary border border-transparent hover:border-border transition-all" title="View"><Eye className="h-4 w-4 text-muted-foreground" /></button>
+                        <button onClick={() => handleEdit(p)} className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-secondary border border-transparent hover:border-border transition-all" title="Edit"><Edit className="h-4 w-4 text-muted-foreground" /></button>
+                        <button onClick={() => handleDelete(p.id)} className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-destructive/10 border border-transparent hover:border-destructive/20 transition-all" title="Delete"><Trash2 className="h-4 w-4 text-destructive" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                 );
+              })}
             </tbody>
           </table>
         </div>

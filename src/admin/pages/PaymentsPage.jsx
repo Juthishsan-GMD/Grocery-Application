@@ -1,18 +1,18 @@
 import { useState } from "react";
-import { StatCard } from "@/admin/components/StatCard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { StatCard } from "../../admin/components/StatCard";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { Search, CreditCard, AlertCircle, CheckCircle2, RefreshCcw, Landmark, Clock } from "lucide-react";
 
 const paymentsData = [
-  { id: "PAY-10041", orderId: "ORD-78451", customer: "Rahul Sharma", amount: "₹19,918", method: "UPI", status: "Success", date: "Mar 21, 2026 14:30" },
-  { id: "PAY-10042", orderId: "ORD-78450", customer: "Priya Patel", amount: "₹7,199", method: "Card", status: "Success", date: "Mar 21, 2026 13:15" },
-  { id: "PAY-10043", orderId: "ORD-78449", customer: "Amit Kumar", amount: "₹33,000", method: "Cash on Delivery", status: "Pending", date: "Mar 20, 2026 18:22" },
-  { id: "PAY-10044", orderId: "ORD-78448", customer: "Sneha Reddy", amount: "₹12,480", method: "UPI", status: "Success", date: "Mar 20, 2026 11:40" },
-  { id: "PAY-10045", orderId: "ORD-78447", customer: "Vikram Singh", amount: "₹25,600", method: "Card", status: "Failed", date: "Mar 19, 2026 09:25" },
-  { id: "PAY-10046", orderId: "ORD-78446", customer: "Meera Joshi", amount: "₹14,240", method: "Wallet", status: "Refunded", date: "Mar 19, 2026 16:50" },
-  { id: "PAY-10047", orderId: "ORD-78445", customer: "Karan Mehta", amount: "₹7,999", method: "UPI", status: "Success", date: "Mar 18, 2026 10:10" },
-  { id: "PAY-10048", orderId: "ORD-78444", customer: "Anita Desai", amount: "₹21,360", method: "Card", status: "Failed", date: "Mar 18, 2026 14:30" },
+  { id: "PAY-10041", orderId: "ORD-78451", customer: "Rahul Sharma", amount: "₹19,918", method: "UPI", status: "Success", date: "Mar 21, 2026 14:30", seller: "TechZone" },
+  { id: "PAY-10042", orderId: "ORD-78450", customer: "Priya Patel", amount: "₹7,199", method: "Card", status: "Success", date: "Mar 21, 2026 13:15", seller: "FashionHub" },
+  { id: "PAY-10043", orderId: "ORD-78449", customer: "Amit Kumar", amount: "₹33,000", method: "COD", status: "Pending", date: "Mar 20, 2026 18:22", seller: "GadgetWorld" },
+  { id: "PAY-10044", orderId: "ORD-78448", customer: "Sneha Reddy", amount: "₹12,480", method: "UPI", status: "Success", date: "Mar 20, 2026 11:40", seller: "BeautyFirst" },
+  { id: "PAY-10045", orderId: "ORD-78447", customer: "Vikram Singh", amount: "₹25,600", method: "Card", status: "Failed", date: "Mar 19, 2026 09:25", seller: "FitGear" },
+  { id: "PAY-10046", orderId: "ORD-78446", customer: "Meera Joshi", amount: "₹14,240", method: "Wallet", status: "Refunded", date: "Mar 19, 2026 16:50", seller: "HomeEssentials" },
+  { id: "PAY-10047", orderId: "ORD-78445", customer: "Karan Mehta", amount: "₹7,999", method: "UPI", status: "Success", date: "Mar 18, 2026 10:10", seller: "TechZone" },
+  { id: "PAY-10048", orderId: "ORD-78444", customer: "Anita Desai", amount: "₹21,360", method: "Card", status: "Failed", date: "Mar 18, 2026 14:30", seller: "FashionHub" },
 ];
 
 const statusStyles = {
@@ -80,26 +80,34 @@ export default function PaymentsPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th className="w-[15%] text-left">Payment ID</th>
-                <th className="w-[15%] text-left">Order ID</th>
-                <th className="w-[20%] text-left">Customer</th>
-                <th className="w-[15%] text-right">Amount</th>
+                <th className="w-[12%] text-left">Payment ID</th>
+                <th className="w-[12%] text-left">Order ID</th>
+                <th className="w-[22%] text-left">Customer / Seller</th>
+                <th className="w-[12%] text-right">Amount</th>
                 <th className="w-[15%] text-left">Method</th>
-                <th className="w-[15%] text-left">Date</th>
-                <th className="w-[5%] text-center">Status</th>
+                <th className="w-[15%] text-left">Date & Time</th>
+                <th className="w-[12%] text-center">Status</th>
               </tr>
             </thead>
             <tbody>
               {filteredPayments.map((p) => (
-                <tr key={p.id}>
+                <tr key={p.id} className="hover:bg-secondary/20 transition-colors">
                   <td className="font-semibold text-card-foreground text-left">{p.id}</td>
-                  <td className="text-muted-foreground text-left">
-                    <span className="hover:underline cursor-pointer hover:text-primary">{p.orderId}</span>
+                  <td className="text-muted-foreground text-left font-mono text-[11px] hover:text-primary cursor-pointer transition-colors">{p.orderId}</td>
+                  <td className="text-left">
+                    <p className="font-bold text-card-foreground">{p.customer}</p>
+                    <p className="text-[10px] text-muted-foreground">{p.seller}</p>
                   </td>
-                  <td className="font-medium text-card-foreground text-left">{p.customer}</td>
                   <td className="text-card-foreground font-bold text-right">{p.amount}</td>
-                  <td className="text-left text-muted-foreground">{p.method}</td>
-                  <td className="text-xs text-muted-foreground text-left">{p.date}</td>
+                  <td className="text-left text-muted-foreground">
+                    <span className="flex items-center gap-1.5 text-xs text-card-foreground/80">
+                      <CreditCard className="h-3 w-3" /> {p.method}
+                    </span>
+                  </td>
+                  <td className="text-[11px] text-muted-foreground text-left leading-tight">
+                    <p className="text-card-foreground/70">{p.date.split(' ')[0]}</p>
+                    <p className="font-mono text-[10px]">{p.date.split(' ')[1]}</p>
+                  </td>
                   <td className="text-center">
                     <span className={statusStyles[p.status]}>{p.status}</span>
                   </td>
@@ -107,8 +115,11 @@ export default function PaymentsPage() {
               ))}
               {filteredPayments.length === 0 && (
                 <tr>
-                  <td colSpan="7" className="text-center py-8 text-muted-foreground">
-                    No transactions match the selected filters.
+                  <td colSpan="7" className="text-center py-12 text-muted-foreground">
+                    <div className="flex flex-col items-center gap-2">
+                      <Search className="h-8 w-8 opacity-20" />
+                      <p>No transactions match the selected filters.</p>
+                    </div>
                   </td>
                 </tr>
               )}

@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Package, ShoppingCart, IndianRupee, FileBarChart,
   UserCircle, Settings, HeadphonesIcon, ChevronLeft, ChevronRight, Store, X, CreditCard, RotateCcw
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/utils";
 
 const mainNav = [
   { title: "Dashboard", path: "/admin", icon: LayoutDashboard },
@@ -79,7 +79,7 @@ export function DashboardSidebar({ collapsed, onToggle, mobileOpen, onMobileClos
           </div>
           {(!collapsed || mobileOpen) && (
             <div className="min-w-0 flex-1">
-              <span className="block text-sm font-bold text-sidebar-accent-foreground truncate">Trendy Drapes</span>
+              <span className="block text-sm font-bold text-sidebar-accent-foreground truncate">FreshBasket</span>
               <span className="block text-[10px] text-sidebar-foreground/60 leading-none">Admin Panel</span>
             </div>
           )}

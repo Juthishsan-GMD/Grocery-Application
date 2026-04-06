@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Bell, X, Mail, Phone, LogOut, Menu, Home } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { useAuth } from "../../contexts/AuthContext";
+import { ThemeToggle } from "../../components/common/ThemeToggle";
 
 export function DashboardHeader({ onMenuClick }) {
   const navigate = useNavigate();

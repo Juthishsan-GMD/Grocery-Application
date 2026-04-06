@@ -1,17 +1,17 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { StatCard } from "@/admin/components/StatCard";
+import { StatCard } from "../../admin/components/StatCard";
 import {
   IndianRupee, TrendingUp, CreditCard, Receipt, Search,
   Package, Plus, Minus, Edit2, Check, X, Download,
   Calendar, Filter, ChevronDown,
 } from "lucide-react";
-import { Input } from "@/admin/components/ui/input";
-import { Button } from "@/admin/components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Button } from "../../components/ui/button";
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
-import { getAllProducts, updateProduct } from "@/admin/lib/productStorage";
+import { getAllProducts, updateProduct } from "../../lib/productStorage";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const COLORS = ["hsl(25,95%,53%)", "hsl(210,92%,55%)", "hsl(280,65%,55%)", "hsl(38,92%,50%)"];
@@ -264,8 +264,20 @@ export default function FinancePage() {
       {/* ── Charts Row ── */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2 chart-card">
-          <h3 className="chart-title">Profit & Loss Trend</h3>
-          <p className="chart-subtitle mb-4">Monthly revenue, costs, and profit</p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="chart-title">Profit & Loss Trend</h3>
+              <p className="chart-subtitle">Monthly revenue, costs, and profit</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground mr-2">
+                <span className="h-2 w-2 rounded-full bg-primary" /> Revenue
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+                <span className="h-2 w-2 rounded-full bg-success" /> Profit
+              </div>
+            </div>
+          </div>
           <ResponsiveContainer width="100%" height={260}>
             <AreaChart data={monthlyPL} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
               <defs>
@@ -333,17 +345,17 @@ export default function FinancePage() {
         </div>
 
         {/* Total stock value */}
-        <div className="rounded-lg bg-secondary/50 p-3 mb-4 flex items-center justify-between">
+        <div className="rounded-xl border bg-card p-5 shadow-sm mb-4 flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Total Inventory Value</p>
-            <p className="text-xl font-bold text-card-foreground mt-0.5">{fmt(totalStockValue)}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Inventory Value</p>
+            <p className="text-2xl font-bold text-card-foreground mt-0.5">{fmt(totalStockValue)}</p>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="text-xs gap-1.5" onClick={exportStockCSV}>
-              <Download className="h-3 w-3" /> CSV
+            <Button size="sm" variant="outline" className="text-xs h-8 gap-1.5" onClick={exportStockCSV}>
+              <Download className="h-3.5 w-3.5" /> CSV
             </Button>
-            <Button size="sm" variant="outline" className="text-xs gap-1.5" onClick={exportStockPDF}>
-              <Download className="h-3 w-3" /> PDF
+            <Button size="sm" variant="outline" className="text-xs h-8 gap-1.5" onClick={exportStockPDF}>
+              <Download className="h-3.5 w-3.5" /> PDF
             </Button>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { Button } from "../../components/ui/button";
 import {
   Search, Store, UserCheck, ShieldCheck, Clock,
   Star, Mail, Phone, MapPin, FileText, CheckCircle2, XCircle,
@@ -20,14 +20,14 @@ const primaryVendor = {
   bank: "Verified",
   products: 480,
   orders: 12400,
-  revenue: "$1.24M",
+  revenue: "₹1.24Cr",
   rating: 4.7,
   onTime: 96,
   joinDate: "Jan 2024",
   status: "Active",
   businessRegistration: "Business Registration Document",
   businessAddress: "Plot 45, Tech Park, Bandra Kurla Complex, Mumbai 400051",
-  bankAccountName: "TechZone Electronics Pvt Ltd",
+  bankAccountName: "FreshBasket Solutions Pvt Ltd",
   bankAccountNumber: "****1234",
   ifscCode: "HDFC0000001",
   documents: {
@@ -131,23 +131,18 @@ export default function PrimaryVendorPage() {
         </div>
 
         {/* Performance Metrics */}
-        <div className="grid gap-4 grid-cols-4 pt-6 border-t">
-          <div>
-            <p className="text-lg font-bold text-card-foreground">{primaryVendor.products}</p>
-            <p className="text-xs text-muted-foreground mt-1">Active Products</p>
-          </div>
-          <div>
-            <p className="text-lg font-bold text-card-foreground">{primaryVendor.orders.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground mt-1">Total Orders</p>
-          </div>
-          <div>
-            <p className="text-lg font-bold text-card-foreground">{primaryVendor.onTime}%</p>
-            <p className="text-xs text-muted-foreground mt-1">On-Time Delivery</p>
-          </div>
-          <div>
-            <p className="text-lg font-bold text-card-foreground">{primaryVendor.revenue}</p>
-            <p className="text-xs text-muted-foreground mt-1">Total Revenue</p>
-          </div>
+        <div className="grid gap-4 grid-cols-4 pt-6 border-t mt-6">
+          {[
+            { label: "Active Products", value: primaryVendor.products },
+            { label: "Total Orders",    value: primaryVendor.orders.toLocaleString() },
+            { label: "On-Time Delivery",value: `${primaryVendor.onTime}%` },
+            { label: "Total Revenue",   value: primaryVendor.revenue },
+          ].map((m) => (
+            <div key={m.label} className="text-center group hover:bg-secondary/20 p-2 rounded-xl transition-all">
+              <p className="text-xl font-bold text-card-foreground">{m.value}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mt-1">{m.label}</p>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -198,8 +193,16 @@ export default function PrimaryVendorPage() {
 
       {/* Performance Chart */}
       <div className="chart-card">
-        <h3 className="chart-title">Performance Trend</h3>
-        <p className="chart-subtitle mb-3">Orders and revenue over the last 4 months</p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="chart-title">Performance Trend</h3>
+            <p className="chart-subtitle">Orders and revenue over the last 4 months</p>
+          </div>
+          <div className="flex items-center gap-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-info" /> Orders</span>
+            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-primary" /> Revenue</span>
+          </div>
+        </div>
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={performanceData} margin={{ top: 0, right: 10, left: -10, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 13%, 91%)" />
@@ -306,4 +309,4 @@ export default function PrimaryVendorPage() {
   );
 }
 
-const Package = (props: any) => <FileText {...props} />;
+const Package = (props) => <FileText {...props} />;

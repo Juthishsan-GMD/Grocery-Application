@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { StatCard } from "@/admin/components/StatCard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { StatCard } from "../../admin/components/StatCard";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import {
   Search, ShoppingCart, Truck, CheckCircle2, XCircle, RotateCcw,
   Eye, X, MapPin, Download, Package, ExternalLink, Calendar, Check,
@@ -165,7 +165,7 @@ function downloadInvoice(order) {
   </div>
 
   <div class="footer">
-    <span>Thank you for your order! For support, contact support@adminpanel.com</span>
+    <span>Thank you for your order! For support, contact support@freshbasket.com</span>
     <span>Generated on ${new Date().toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" })}</span>
   </div>
 </body>

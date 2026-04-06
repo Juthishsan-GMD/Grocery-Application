@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { Mail, Phone, MapPin, Edit, Camera } from "lucide-react";
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "Admin Director",
-    email: "admin@shopvault.com",
+    email: "admin@freshbasket.com",
     phone: "+91 98765-43210",
     role: "Super Admin",
     address: "Tower A, Business Park, Andheri East, Mumbai 400069",
@@ -62,7 +62,7 @@ export default function ProfilePage() {
             </button>
           </div>
           <h3 className="text-base font-semibold text-card-foreground">Admin Director</h3>
-          <p className="text-xs text-muted-foreground">Super Admin · ShopVault</p>
+          <p className="text-xs text-muted-foreground">Super Admin · FreshBasket</p>
           <div className="mt-4 space-y-2 text-xs text-muted-foreground">
             <div className="flex items-center justify-center gap-2"><Mail className="h-3.5 w-3.5" />{formData.email}</div>
             <div className="flex items-center justify-center gap-2"><Phone className="h-3.5 w-3.5" />{formData.phone}</div>

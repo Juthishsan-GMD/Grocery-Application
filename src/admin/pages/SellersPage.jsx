@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { StatCard } from "@/admin/components/StatCard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { StatCard } from "../../admin/components/StatCard";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import {
   Search, Plus, Store, UserCheck, UserX, ShieldCheck, Clock,
   Star, Mail, Phone, MapPin, FileText, CheckCircle2, XCircle,
@@ -11,12 +11,13 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const sellers = [
-  { id: 1, name: "TechZone Electronics", owner: "Rajesh Mehta", email: "rajesh@techzone.com", phone: "+91 98765-43210", location: "Mumbai, MH", gst: "27AABCT1234F1Z5", pan: "AABCT1234F", bank: "Verified", products: 480, orders: 12400, revenue: "$1.24M", rating: 4.7, onTime: 96, joinDate: "Jan 2024", status: "Active" },
-  { id: 2, name: "FashionHub India", owner: "Priya Sharma", email: "priya@fashionhub.com", phone: "+91 87654-32109", location: "Delhi, DL", gst: "07AABCF5678G1Z3", pan: "AABCF5678G", bank: "Verified", products: 1250, orders: 18600, revenue: "$892K", rating: 4.5, onTime: 93, joinDate: "Mar 2024", status: "Active" },
-  { id: 3, name: "GadgetWorld", owner: "Amit Patel", email: "amit@gadgetworld.in", phone: "+91 76543-21098", location: "Bangalore, KA", gst: "29AABCG9012H1Z1", pan: "AABCG9012H", bank: "Verified", products: 320, orders: 8400, revenue: "$680K", rating: 4.8, onTime: 98, joinDate: "Jun 2024", status: "Active" },
-  { id: 4, name: "BeautyFirst Co.", owner: "Sneha Reddy", email: "sneha@beautyfirst.com", phone: "+91 65432-10987", location: "Hyderabad, TS", gst: "36AABCB3456I1Z9", pan: "AABCB3456I", bank: "Verified", products: 890, orders: 15200, revenue: "$456K", rating: 4.3, onTime: 91, joinDate: "Aug 2024", status: "Active" },
-  { id: 5, name: "StyleMart", owner: "Karan Singh", email: "karan@stylemart.in", phone: "+91 54321-09876", location: "Pune, MH", gst: "Pending", pan: "Submitted", bank: "Pending", products: 0, orders: 0, revenue: "$0", rating: 0, onTime: 0, joinDate: "Mar 2026", status: "Pending KYC" },
-  { id: 6, name: "QuickBuy Store", owner: "Deepak Gupta", email: "deepak@quickbuy.com", phone: "+91 43210-98765", location: "Chennai, TN", gst: "33AABCQ7890J1Z7", pan: "AABCQ7890J", bank: "Verified", products: 150, orders: 2800, revenue: "$124K", rating: 3.2, onTime: 72, joinDate: "Nov 2025", status: "Suspended" },
+  { id: 1, name: "TechZone Electronics", owner: "Rajesh Mehta", email: "rajesh@techzone.com", phone: "+91 98765-43210", location: "Mumbai, MH", gst: "27AABCT1234F1Z5", pan: "AABCT1234F", bank: "Verified", products: 480, orders: 12400, revenue: "₹1.24Cr", rating: 4.7, onTime: 96, joinDate: "Jan 2024", status: "Active" },
+  { id: 2, name: "FashionHub India", owner: "Priya Sharma", email: "priya@fashionhub.com", phone: "+91 87654-32109", location: "Delhi, DL", gst: "07AABCF5678G1Z3", pan: "AABCF5678G", bank: "Verified", products: 1250, orders: 18600, revenue: "₹89.2L", rating: 4.5, onTime: 93, joinDate: "Mar 2024", status: "Active" },
+  { id: 3, name: "GadgetWorld", owner: "Amit Patel", email: "amit@gadgetworld.in", phone: "+91 76543-21098", location: "Bangalore, KA", gst: "29AABCG9012H1Z1", pan: "AABCG9012H", bank: "Verified", products: 320, orders: 8400, revenue: "₹68.0L", rating: 4.8, onTime: 98, joinDate: "Jun 2024", status: "Active" },
+  { id: 4, name: "BeautyFirst Co.", owner: "Sneha Reddy", email: "sneha@beautyfirst.com", phone: "+91 65432-10987", location: "Hyderabad, TS", gst: "36AABCB3456I1Z9", pan: "AABCB3456I", bank: "Verified", products: 890, orders: 15200, revenue: "₹45.6L", rating: 4.3, onTime: 91, joinDate: "Aug 2024", status: "Active" },
+  { id: 5, name: "StyleMart", owner: "Karan Singh", email: "karan@stylemart.in", phone: "+91 54321-09876", location: "Pune, MH", gst: "Pending", pan: "Submitted", bank: "Pending", products: 0, orders: 0, revenue: "₹0", rating: 0, onTime: 0, joinDate: "Mar 2026", status: "Pending KYC" },
+  { id: 6, name: "QuickBuy Store", owner: "Deepak Gupta", email: "deepak@quickbuy.com", phone: "+91 43210-98765", location: "Chennai, TN", gst: "33AABCQ7890J1Z7", pan: "AABCQ7890J", bank: "Verified", products: 150, orders: 2800, revenue: "₹12.4L", rating: 3.2, onTime: 72, joinDate: "Nov 2025", status: "Suspended" },
+  { id: 7, name: "LuxeJewels™", owner: "Arjun Mehta", email: "seller@freshbasket.com", phone: "+91 99887-76655", location: "Surat, GJ", gst: "24AAACL1234K1Z1", pan: "AAACL1234K", bank: "Verified", products: 12, orders: 150, revenue: "₹4.2L", rating: 4.9, onTime: 99, joinDate: "Apr 2026", status: "Active" },
 ];
 
 const performanceData = sellers.filter(s => s.status === "Active").map(s => ({

@@ -1,9 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import { StatCard } from "@/admin/components/StatCard";
-import { Input } from "@/components/ui/input";
-import { getAllProducts } from "@/lib/productStorage";
-import { useLocalProducts } from "@/admin/hooks/useLocalProducts";
-import { useAdminSearch } from "@/admin/contexts/AdminSearchContext";
+import {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
+import { StatCard } from "../../admin/components/StatCard";
+import { Input } from "../../components/ui/input";
+import { useProducts } from "../../contexts/ProductContext";
+import { useAdminSearch } from "../../admin/contexts/AdminSearchContext";
 import {
   IndianRupee, TrendingUp, ShoppingCart, Package, Users, Percent, Award, TrendingDown,
   Clock, CheckCircle2, Store, Search, Star
@@ -44,10 +47,6 @@ function ProductImage({ src, name, size = 40 }) {
     </div>
   );
 }
-import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from "recharts";
 
 const revenueData = [
   { month: "Jul", revenue: 485000, orders: 3200, profit: 143000 },
@@ -174,8 +173,7 @@ function PerformanceBar({ value }) {
 }
 
 export default function DashboardHome() {
-  const [products, setProducts] = useState([]);
-  const { localProducts, deletedProducts } = useLocalProducts();
+  const { products } = useProducts();
   const { searchQuery: search, setSearchQuery: setSearch } = useAdminSearch();
 
   const [category, setCategory]     = useState("All");
@@ -184,15 +182,6 @@ export default function DashboardHome() {
   const [dateSort, setDateSort]     = useState("Newest First");
   const [salesPeriod, setSalesPeriod] = useState("monthly");
 
-  useEffect(() => {
-    const baseProducts = getAllProducts();
-    const combined = [...baseProducts, ...localProducts];
-    const uniqueMap = new Map();
-    combined.forEach(p => {
-      if (!deletedProducts.includes(p.id)) uniqueMap.set(p.id, p);
-    });
-    setProducts(Array.from(uniqueMap.values()));
-  }, [localProducts, deletedProducts]);
 
   const getStatus = (product) => (product.stock === 0 ? "Out of Stock" : "Active");
 
