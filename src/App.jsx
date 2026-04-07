@@ -12,6 +12,7 @@ import About from './buyer/pages/About';
 import Contact from './buyer/pages/Contact';
 import ProductDetails from './buyer/pages/ProductDetails';
 import { CartProvider } from './contexts/CartContext';
+import { WishlistProvider } from './contexts/WishlistContext';
 import { Link } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProductProvider } from './contexts/ProductContext';
@@ -33,6 +34,7 @@ import SellerAuthPage from './seller/pages/SellerAuthPage';
 import SellerDashboard from './seller/pages/SellerDashboard';
 import SellerProtectedRoute from './seller/components/SellerProtectedRoute';
 import AccountRedirect from './seller/components/AccountRedirect';
+import Wishlist from './buyer/pages/Wishlist';
 import './styles/base/App.css';
 
 function StoreLayout() {
@@ -50,6 +52,7 @@ function StoreLayout() {
           <Route path="/signup" element={<AuthPage />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/account" element={<AccountRedirect />} />
         </Routes>
       </main>
@@ -105,12 +108,14 @@ function App() {
       <ProductProvider>
         <Router>
           <ScrollToTop />
-          <CartProvider>
-            <Routes>
+          <WishlistProvider>
+            <CartProvider>
+              <Routes>
               <Route path="/admin" element={<DashboardLayout />}>
                 <Route index element={<DashboardHome />} />
                 <Route path="products" element={<ProductsPage />} />
                 <Route path="products/add" element={<AddProductPage />} />
+                <Route path="products/edit/:id" element={<AddProductPage />} />
                 <Route path="orders" element={<OrdersPage />} />
                 <Route path="payments" element={<PaymentsPage />} />
                 <Route path="returns" element={<ReturnsPage />} />
@@ -126,7 +131,8 @@ function App() {
               <Route path="/seller/*" element={<SellerProtectedRoute><SellerDashboard /></SellerProtectedRoute>} />
               <Route path="/*" element={<StoreLayout />} />
             </Routes>
-          </CartProvider>
+            </CartProvider>
+          </WishlistProvider>
         </Router>
       </ProductProvider>
     </AuthProvider>

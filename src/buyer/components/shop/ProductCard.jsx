@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiHeart, FiStar, FiShoppingCart, FiMinus, FiPlus } from 'react-icons/fi';
 import { useCart } from '../../../contexts/CartContext';
+import { useWishlist } from '../../../contexts/WishlistContext';
 import CustomSelect from '../../../components/common/CustomSelect';
 import '../../../styles/components/ProductCard.css';
 
@@ -16,29 +17,44 @@ const categoryColors = {
 
 const ProductCard = ({ product, cardType = 'shop' }) => {
   const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
   
   // Safely coerce price to number
   const safePrice = Number(product.price) || 0;
   const safeMrp = Number(product.mrp) || safePrice;
   
   const hasVariants = product.variants && product.variants.length > 0;
-  const initialVariant = hasVariants ? product.variants[0] : { unit: product.unit || '1 pc', price: safePrice };
-  const [selectedVariant, setSelectedVariant] = useState(initialVariant);
+  const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
 
+  const selectedVariant = hasVariants && product.variants[selectedVariantIdx] ? product.variants[selectedVariantIdx] : { unit: product.unit || '1 pc', price: safePrice, mrp: safeMrp };
   const currentPrice = Number(selectedVariant.price) || safePrice;
+  const currentMrp = Number(selectedVariant.mrp) || safeMrp;
+  
+  let dynamicDiscount = Number(product.discount) || 0;
+  if (!dynamicDiscount && currentMrp > currentPrice) {
+    dynamicDiscount = Math.round(((currentMrp - currentPrice) / currentMrp) * 100);
+  }
+
   const uniqueId = `${product.id}-${selectedVariant.unit}`;
   const cartItem = cart.find(item => item.uniqueId === uniqueId);
   const qtyInCart = cartItem ? cartItem.quantity : 0;
 
+  const savedReviews = localStorage.getItem(`reviews_product_${product.id}`);
+  const customReviews = savedReviews ? JSON.parse(savedReviews) : [];
+  const allReviews = [...customReviews, ...(product.reviews || [])];
+  const dynamicRating = allReviews.length > 0 
+    ? (allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length).toFixed(1) 
+    : Number(product.rating || 4.5).toFixed(1);
+
   const handleVariantChange = (idx) => {
-    setSelectedVariant(product.variants[idx]);
+    setSelectedVariantIdx(idx);
   };
 
   const handleAdd = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const discount = Number(product.discount) || 0;
-    const sellPrice = discount > 0 ? currentPrice * (1 - discount / 100) : currentPrice;
+    const isLegacyDiscount = Number(product.discount) > 0 && currentMrp === currentPrice;
+    const sellPrice = isLegacyDiscount ? currentPrice * (1 - Number(product.discount) / 100) : currentPrice;
     addToCart({ ...product, price: sellPrice, unit: selectedVariant.unit });
   };
 
@@ -58,6 +74,14 @@ const ProductCard = ({ product, cardType = 'shop' }) => {
     }
   };
 
+  const handleWishlistToggle = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleWishlist(product);
+  };
+
+  const isWished = isInWishlist(product.id);
+
   const cardClass = cardType === 'home' ? 'product-card' : 'shop-card';
   const imgClass = cardType === 'home' ? 'product-image-container' : 'shop-image-container';
   const contentClass = cardType === 'home' ? 'product-content' : 'shop-content';
@@ -65,11 +89,17 @@ const ProductCard = ({ product, cardType = 'shop' }) => {
   return (
     <div className={cardClass} style={{ '--category-color': categoryColors[product.category] || '#55b746' }}>
       <div className="card-top-accent"></div>
-      {product.discount > 0 && (
-        <div className="discount-badge">{product.discount}% OFF</div>
+      {dynamicDiscount > 0 && (
+        <div className="discount-badge">{dynamicDiscount}% OFF</div>
       )}
       <div className={`${cardType}-actions-hover product-actions-hover`}>
-        <button className="icon-btn heart-btn" title="Add to wishlist" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}><FiHeart /></button>
+        <button 
+          className="icon-btn heart-btn" 
+          title={isWished ? "Remove from wishlist" : "Add to wishlist"} 
+          onClick={handleWishlistToggle}
+        >
+          <FiHeart fill={isWished ? "#ff5252" : "none"} color={isWished ? "#ff5252" : "currentColor"} />
+        </button>
       </div>
       
       <Link to={`/product/${product.id}`} className="card-link-wrapper">
@@ -84,13 +114,14 @@ const ProductCard = ({ product, cardType = 'shop' }) => {
             >
               {product.category}
             </span>
-            {Number(product.rating) > 4.7 && <span className="hot-deal-badge">🔥 Hot</span>}
+            {dynamicRating >= 4.7 && <span className="hot-deal-badge">🔥 Hot</span>}
           </div>
           <h3 className={`${cardType}-name product-name`}>{product.name}</h3>
           <div className={`${cardType}-rating product-rating`}>
             <div className="stars-small">
               <FiStar className="star-icon filled" />
-              <span>{Number(product.rating).toFixed(1)}</span>
+              <span>{dynamicRating}</span>
+              <span style={{ fontSize: '0.85em', marginLeft: '2px', color: 'var(--text-secondary)' }}>({allReviews.length})</span>
             </div>
             <span className="orders-mini">
               📦 {Math.abs((typeof product.id === 'number' ? product.id * 3 : String(product.id).length * 7) % 100) + 40}+
@@ -103,17 +134,20 @@ const ProductCard = ({ product, cardType = 'shop' }) => {
         
         {/* Modern Variant Selector */}
         {hasVariants && (
-          <div className="variant-selector-wrapper">
+          <div className="variant-selector-wrapper" onClick={(e) => e.stopPropagation()}>
             <CustomSelect 
-              value={product.variants.indexOf(selectedVariant)}
+              value={selectedVariantIdx}
               onChange={handleVariantChange}
               options={product.variants.map((v, idx) => {
                 const vPrice = Number(v.price) || 0;
-                const disc = Number(product.discount) || 0;
+                const vMrp = Number(v.mrp) || vPrice;
+                const isLegacyDiscount = Number(product.discount) > 0 && vMrp === vPrice;
+                let disc = Number(product.discount) || 0;
+                if (!isLegacyDiscount && vMrp > vPrice) disc = Math.round(((vMrp - vPrice) / vMrp) * 100);
                 const isDiscounted = disc > 0;
-                const vSellPrice = isDiscounted ? vPrice * (1 - disc / 100) : vPrice;
+                const vSellPrice = isLegacyDiscount ? vPrice * (1 - disc / 100) : vPrice;
                 const priceLabel = isDiscounted 
-                  ? <><span className="original-price strike-out">₹{vPrice.toFixed(0)}</span> <span className="deal-price">₹{vSellPrice.toFixed(2)}</span></>
+                  ? <><span className="original-price strike-out">₹{(vMrp || vPrice).toFixed(0)}</span> <span className="deal-price">₹{vSellPrice.toFixed(2)}</span></>
                   : `₹${vPrice.toFixed(2)}`;
                 return {
                   value: idx,
@@ -126,13 +160,13 @@ const ProductCard = ({ product, cardType = 'shop' }) => {
 
         <div className={`${cardType}-footer product-footer`}>
           <div className="price-container">
-            {(Number(product.discount) || 0) > 0 ? (
+            {dynamicDiscount > 0 ? (
               <div className="deal-price-wrapper">
                  <span className={`${cardType}-price original-price strike-out`}>
-                    ₹{currentPrice.toFixed(0)}
+                    ₹{currentMrp.toFixed(0)}
                  </span>
                  <span className={`${cardType}-price deal-price product-price`}>
-                    ₹{(currentPrice * (1 - (Number(product.discount) || 0) / 100)).toFixed(2)}
+                    ₹{(Number(product.discount) > 0 && currentMrp === currentPrice ? currentPrice * (1 - Number(product.discount) / 100) : currentPrice).toFixed(2)}
                  </span>
               </div>
             ) : (

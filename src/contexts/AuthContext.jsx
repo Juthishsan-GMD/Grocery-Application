@@ -4,11 +4,20 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     const admin = localStorage.getItem('isAdmin');
     if (admin === 'true') {
       setIsAdmin(true);
+    }
+    const user = localStorage.getItem('current_user');
+    if (user) {
+      try {
+        setCurrentUser(JSON.parse(user));
+      } catch (e) {
+        // ignore
+      }
     }
   }, []);
 
@@ -28,8 +37,18 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('adminProfile');
   };
 
+  const loginUser = (userData) => {
+    setCurrentUser(userData);
+    localStorage.setItem('current_user', JSON.stringify(userData));
+  };
+
+  const logoutUser = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('current_user');
+  };
+
   return (
-    <AuthContext.Provider value={{ isAdmin, adminLogin, adminLogout }}>
+    <AuthContext.Provider value={{ isAdmin, adminLogin, adminLogout, currentUser, loginUser, logoutUser }}>
       {children}
     </AuthContext.Provider>
   );

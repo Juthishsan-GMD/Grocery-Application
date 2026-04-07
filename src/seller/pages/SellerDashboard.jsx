@@ -20,6 +20,7 @@ import {
 } from "recharts";
 import { products as staticProducts } from "../../constants/data";
 import { useProducts } from "../../contexts/ProductContext";
+import ProductViewModal from "../../components/common/ProductViewModal";
 
 // ─── DUMMY DATA ──────────────────────────────────────────────────────────────
 
@@ -591,7 +592,8 @@ function ProductEditor({ editProduct, onSave, onCancel, D, dark }) {
     unit: editProduct?.unit || "1 kg",
     images: editProduct?.images || (editProduct?.imageData ? [editProduct.imageData] : []),
     featured: editProduct?.featured || false,
-    status: editProduct?.status || "active"
+    status: editProduct?.status || "active",
+    variants: editProduct?.variants || [{ unit: editProduct?.unit || "1 kg", price: editProduct?.price || "", mrp: editProduct?.mrp || "", stock: editProduct?.stock || "" }]
   });
 
   const [errors, setErrors] = useState({});
@@ -601,6 +603,28 @@ function ProductEditor({ editProduct, onSave, onCancel, D, dark }) {
     const { name, value, type, checked } = e.target;
     setForm(p => ({ ...p, [name]: type === "checkbox" ? checked : value }));
     if (errors[name]) setErrors(p => ({ ...p, [name]: "" }));
+  };
+
+  const handleVariantChange = (index, field, value) => {
+    setForm(p => {
+      const newVars = [...p.variants];
+      newVars[index][field] = value;
+      if (index === 0) {
+        return { ...p, variants: newVars, [field]: value };
+      }
+      return { ...p, variants: newVars };
+    });
+    if (errors[field]) setErrors(p => ({ ...p, [field]: "" }));
+  };
+
+  const addVariant = () => {
+    setForm(p => ({ ...p, variants: [...p.variants, { unit: "500 g", price: "", mrp: "", stock: "50" }] }));
+  };
+
+  const removeVariant = (index) => {
+    if (form.variants.length > 1) {
+      setForm(p => ({ ...p, variants: p.variants.filter((_, i) => i !== index) }));
+    }
   };
 
   const handleCategoryChange = (e) => {
@@ -642,6 +666,13 @@ function ProductEditor({ editProduct, onSave, onCancel, D, dark }) {
     setSubmitting(true);
     
     // Normalize category and subcategory for saving
+    const formattedVariants = form.variants.map((v, i) => ({
+      unit: v.unit || (i === 0 ? form.unit : "1 pc"),
+      price: Number(v.price) || Number(form.price) || 0,
+      mrp: Number(v.mrp) || Number(form.mrp) || Number((v.price) || form.price) || 0,
+      stock: Number(v.stock) || 0
+    }));
+
     const finalProduct = {
       ...form,
       id: editProduct?.id || `seller-${Date.now()}`,
@@ -649,7 +680,8 @@ function ProductEditor({ editProduct, onSave, onCancel, D, dark }) {
       subCategory: (form.subCategory || "").toLowerCase().trim(),
       price: Number(form.price),
       mrp: Number(form.mrp || form.price),
-      stock: Number(form.stock),
+      stock: form.variants.reduce((acc, v) => acc + Number(v.stock || form.stock), 0),
+      variants: formattedVariants,
       image: form.images[0],
       isNew: !editProduct,
       rating: editProduct?.rating || 4.5,
@@ -808,44 +840,45 @@ function ProductEditor({ editProduct, onSave, onCancel, D, dark }) {
 
                     <div style={{ height: "1px", background: D.border }} />
 
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
-                      <div>
-                        <label style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px", display: "block" }}>Sell Price (₹) *</label>
-                        <Input name="price" type="number" value={form.price} onChange={handleChange} placeholder="99" style={{ height: "48px", borderRadius: "12px", background: D.bg, color: D.text }} />
-                        {errors.price && <p style={{ fontSize: "11px", color: "#ef4444", marginTop: "6px" }}>{errors.price}</p>}
-                      </div>
-                      <div>
-                        <label style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px", display: "block" }}>MRP (₹) *</label>
-                        <Input name="mrp" type="number" value={form.mrp} onChange={handleChange} placeholder="120" style={{ height: "48px", borderRadius: "12px", background: D.bg, color: D.text }} />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: "14px", fontWeight: "600", marginBottom: "8px", display: "block" }}>Stock Quantity *</label>
-                        <Input name="stock" type="number" value={form.stock} onChange={handleChange} placeholder="100" style={{ height: "48px", borderRadius: "12px", background: D.bg, color: D.text }} />
-                        {errors.stock && <p style={{ fontSize: "11px", color: "#ef4444", marginTop: "6px" }}>{errors.stock}</p>}
-                      </div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <label style={{ fontSize: "14px", fontWeight: "600", display: "block" }}>Variants (Pricing & Stock) *</label>
+                      <Button type="button" variant="outline" size="sm" onClick={addVariant} style={{ height: "32px", fontSize: "12px", padding: "0 12px", borderRadius: "8px", color: D.text, borderColor: D.border }}><Plus size={14} style={{ marginRight: "4px" }}/> Add Variant</Button>
                     </div>
 
-                    <div>
-                      <label style={{ fontSize: "14px", fontWeight: "600", marginBottom: "12px", display: "block" }}>Unit/Weight Range *</label>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-                        {UNIT_OPTIONS.map((u) => (
-                          <button 
-                            key={u} 
-                            type="button" 
-                            onClick={() => setForm(p => ({ ...p, unit: u }))}
-                            style={{ 
-                              padding: "10px 16px", borderRadius: "12px", fontSize: "12px", fontWeight: "700", 
-                              border: `1px solid ${form.unit === u ? "#10B981" : D.border}`,
-                              background: form.unit === u ? "#10B981" : "transparent",
-                              color: form.unit === u ? "#fff" : D.muted,
-                              cursor: "pointer", transition: "all 0.2s",
-                              boxShadow: form.unit === u ? "0 4px 10px rgba(16,185,129,0.2)" : "none",
-                              transform: form.unit === u ? "scale(1.05)" : "scale(1)"
-                            }}>
-                            {u}
-                          </button>
-                        ))}
-                      </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                      {form.variants.map((v, index) => (
+                        <div key={index} style={{ padding: "16px", border: `1px solid ${D.border}`, borderRadius: "12px", background: "rgba(0,0,0,0.02)", position: "relative" }}>
+                          {index > 0 && (
+                            <button type="button" onClick={() => removeVariant(index)} style={{ position: "absolute", top: "12px", right: "12px", background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", border: "none", borderRadius: "50%", width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                              <X size={14} />
+                            </button>
+                          )}
+                          <h4 style={{ fontSize: "12px", fontWeight: "700", marginBottom: "12px", color: D.muted, textTransform: "uppercase", letterSpacing: "0.5px" }}>Variant {index + 1} {index === 0 && "(Primary)"}</h4>
+                          
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "12px" }}>
+                            <div>
+                              <label style={{ fontSize: "12px", fontWeight: "600", marginBottom: "8px", display: "block" }}>Unit Weight</label>
+                              <select value={v.unit} onChange={(e) => handleVariantChange(index, "unit", e.target.value)} className={selectClass} style={{ height: '40px', background: D.bg, color: D.text, borderRadius: "8px" }}>
+                                {UNIT_OPTIONS.map(u => <option key={u} value={u}>{u}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label style={{ fontSize: "12px", fontWeight: "600", marginBottom: "8px", display: "block" }}>Sell Price (₹)</label>
+                              <Input type="number" value={v.price} onChange={(e) => handleVariantChange(index, "price", e.target.value)} placeholder="99" style={{ height: "40px", borderRadius: "8px", background: D.bg, color: D.text }} />
+                              {index === 0 && errors.price && <p style={{ fontSize: "10px", color: "#ef4444", marginTop: "4px" }}>{errors.price}</p>}
+                            </div>
+                            <div>
+                              <label style={{ fontSize: "12px", fontWeight: "600", marginBottom: "8px", display: "block" }}>MRP (₹)</label>
+                              <Input type="number" value={v.mrp} onChange={(e) => handleVariantChange(index, "mrp", e.target.value)} placeholder="120" style={{ height: "40px", borderRadius: "8px", background: D.bg, color: D.text }} />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: "12px", fontWeight: "600", marginBottom: "8px", display: "block" }}>Stock Total</label>
+                              <Input type="number" value={v.stock} onChange={(e) => handleVariantChange(index, "stock", e.target.value)} placeholder="100" style={{ height: "40px", borderRadius: "8px", background: D.bg, color: D.text }} />
+                              {index === 0 && errors.stock && <p style={{ fontSize: "10px", color: "#ef4444", marginTop: "4px" }}>{errors.stock}</p>}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -950,6 +983,7 @@ function ProductsPage({ products, setProducts, D, dark, loading, orders = [], ho
   const [search, setSearch] = useState("");
   const [editorView, setEditorView] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
+  const [viewProduct, setViewProduct] = useState(null);
   const [view, setView] = useState("table");
   const { toast } = useToast();
 
@@ -1244,6 +1278,7 @@ function ProductsPage({ products, setProducts, D, dark, loading, orders = [], ho
 
   return (
     <div style={{ display: "grid", flexDirection: "column", gap: 20 }}>
+      <ProductViewModal product={viewProduct} onClose={() => setViewProduct(null)} />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <PageHeader title="Products" subtitle={`${safeProducts.length} products in your store`} D={D} />
         <button onClick={openAdd} style={styles.goldBtn}><Plus size={15} /> Add Product</button>
@@ -1327,6 +1362,7 @@ function ProductsPage({ products, setProducts, D, dark, loading, orders = [], ho
                   <td style={{ padding: "14px 16px", fontSize: 13 }}>{p.sold || 0}</td>
                   <td style={{ padding: "14px 16px" }}>
                     <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => setViewProduct(p)} style={{ ...styles.iconBtn, background: "rgba(59,130,246,0.1)", width: 30, height: 30 }}><Eye size={13} color="#3b82f6" /></button>
                       <button onClick={() => openEdit(p)} style={{ ...styles.iconBtn, background: "rgba(16,185,129,0.1)", width: 30, height: 30 }}><Edit2 size={13} color="#10B981" /></button>
                       <button onClick={() => deleteProduct(p.id)} style={{ ...styles.iconBtn, background: "rgba(239,68,68,0.1)", width: 30, height: 30 }}><Trash2 size={13} color="#ef4444" /></button>
                     </div>
@@ -1377,8 +1413,11 @@ function ProductsPage({ products, setProducts, D, dark, loading, orders = [], ho
               </div>
               
               <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
+                <button onClick={() => setViewProduct(p)} style={{ ...styles.iconBtn, background: "rgba(59,130,246,0.1)", flex: 1, borderRadius: 8 }}>
+                  <Eye size={13} color="#3b82f6" />
+                </button>
                 <button onClick={() => openEdit(p)} style={{ ...styles.goldBtn, padding: "8px 12px", fontSize: 12, flex: 1 }}>
-                  <Edit2 size={12} /> Edit
+                  <Edit2 size={12} />
                 </button>
                 <button onClick={() => deleteProduct(p.id)} style={{ ...styles.iconBtn, background: "rgba(239,68,68,0.1)", flex: 1, borderRadius: 8 }}>
                   <Trash2 size={13} color="#ef4444" />

@@ -1,27 +1,31 @@
-// ProductsPage – managed via ProductContext
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { Search, Plus, Package, Star, Eye, Edit, Trash2 } from "lucide-react";
+import { Search, Plus, Package, Eye, Edit, Trash2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useProducts } from "../../contexts/ProductContext";
-
-const categoryStock = [
-  { name: "Vegetables", products: 120, active: 110, color: '#10b981' },
-  { name: "Fruits", products: 85, active: 80, color: '#fbbf24' },
-  { name: "Dairy", products: 45, active: 42, color: '#3b82f6' },
-  { name: "Bakery", products: 30, active: 28, color: '#d97706' },
-  { name: "Beverages", products: 60, active: 55, color: '#ef4444' },
-  { name: "Snacks", products: 50, active: 48, color: '#a855f7' },
-];
-
-const statusStyle = {
-  Active: "badge-success", "Low Stock": "badge-warning", "Out of Stock": "badge-danger", Inactive: "badge-neutral",
-};
+import { useState, useMemo } from "react";
+import ProductViewModal from "../../components/common/ProductViewModal";
 
 export default function ProductsPage() {
   const navigate = useNavigate();
   const { products: allProducts, removeProduct, updateProduct } = useProducts();
+
+  // Derive category stock data dynamically
+  const dynamicStockData = useMemo(() => {
+    const categories = Array.from(new Set(allProducts.map(p => p.category || "General")));
+    return categories.map(cat => {
+      const catProducts = allProducts.filter(p => p.category === cat);
+      const activeProducts = catProducts.filter(p => p.stock > 0);
+      return {
+        name: String(cat).split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+        products: catProducts.length,
+        active: activeProducts.length
+      };
+    });
+  }, [allProducts]);
+
+  const [viewProduct, setViewProduct] = useState(null);
   
   // No need for local state, use context directly
   const products = allProducts;
@@ -43,23 +47,17 @@ export default function ProductsPage() {
   };
 
   const handleView = (product) => {
-    alert(`Viewing: ${product.name}\n\nCategory: ${product.category}\nSeller: ${product.seller}\nPrice: ${product.price}\nStock: ${product.stock}\n\n${product.description}`);
+    setViewProduct(product);
   };
 
   const handleEdit = (product) => {
-    const newName = prompt("Edit product name:", product.name);
-    if (newName && newName !== product.name) {
-      const newPrice = Number(prompt("Edit price:", product.price));
-      const newStock = Number(prompt("Edit stock:", product.stock.toString()));
-      if (!isNaN(newPrice) && !isNaN(newStock)) {
-        updateProduct(product.id, { name: newName, price: newPrice, stock: newStock });
-        alert("Product updated successfully!");
-      }
-    }
+    navigate(`/admin/products/edit/${product.id}`);
   };
 
   return (
-    <div className="space-y-5">
+    <>
+      <ProductViewModal product={viewProduct} onClose={() => setViewProduct(null)} />
+      <div className="space-y-5">
       <div className="page-header flex items-center justify-between">
         <div>
           <h1 className="page-title">Products</h1>
@@ -82,7 +80,7 @@ export default function ProductsPage() {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={categoryStock} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
+            <BarChart data={dynamicStockData} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fontWeight: 500 }} stroke="hsl(var(--muted-foreground))" />
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
@@ -185,6 +183,7 @@ export default function ProductsPage() {
           </table>
         </div>
       </div>
-    </div>
+     </div>
+    </>
   );
 }

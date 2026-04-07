@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FiShoppingCart, FiMenu, FiSearch, FiChevronDown } from 'react-icons/fi';
+import { FiShoppingCart, FiMenu, FiSearch, FiChevronDown, FiHeart } from 'react-icons/fi';
 import { useCart } from '../../contexts/CartContext';
 import { useProducts } from '../../contexts/ProductContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useWishlist } from '../../contexts/WishlistContext';
 import { categories } from '../../constants/data';
 import '../../styles/components/Navbar.css';
 
@@ -13,7 +15,9 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { cartCount } = useCart();
+  const { wishlist } = useWishlist();
   const { products } = useProducts();
+  const { currentUser, logoutUser } = useAuth();
 
   const handleSearchChange = (e) => {
     const query = e.target.value;
@@ -112,13 +116,41 @@ const Navbar = () => {
           </ul>
         </nav>
         {/* Right: Actions */}
-        <div className="nav-right">
+        <div className="nav-right" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button className="icon-btn cart-btn-modern" aria-label="Wishlist" onClick={() => navigate('/wishlist')}>
+            <FiHeart size={18} />
+            {wishlist.length > 0 && <span className="cart-badge-dot" style={{ backgroundColor: '#ff5252' }}>{wishlist.length}</span>}
+          </button>
           <button className="icon-btn cart-btn-modern" aria-label="Cart" onClick={() => navigate('/cart')}>
             <FiShoppingCart size={18} />
             {cartCount > 0 && <span className="cart-badge-dot">{cartCount}</span>}
           </button>
-          <Link to="/login" className="login-link">Login</Link>
-          <Link to="/signup" className="btn btn-primary sign-up-btn" style={{ textDecoration: 'none' }}>Sign Up</Link>
+          
+          {currentUser ? (
+            <div className="user-profile-nav dropdown-wrapper" style={{ position: 'relative' }}>
+              <div className="dropdown-trigger" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600, color: '#fff' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#fff', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                  {currentUser.name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+                <span>{currentUser.name?.split(' ')[0] || 'User'}</span> <FiChevronDown size={14} />
+              </div>
+              <ul className="dropdown-menu" style={{ right: 0, left: 'auto', minWidth: '150px' }}>
+                <li style={{ borderBottom: '1px solid var(--border-color)', padding: '0.5rem 1rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  {currentUser.email}
+                </li>
+                <li>
+                  <button onClick={() => { logoutUser(); navigate('/'); }} style={{ width: '100%', background: 'none', border: 'none', padding: '0.8rem 1rem', textAlign: 'left', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 600 }}>
+                    Logout
+                  </button>
+                </li>
+              </ul>
+            </div>
+          ) : (
+            <>
+              <Link to="/login" className="login-link">Login</Link>
+              <Link to="/signup" className="btn btn-primary sign-up-btn" style={{ textDecoration: 'none' }}>Sign Up</Link>
+            </>
+          )}
         </div>
 
       </div>

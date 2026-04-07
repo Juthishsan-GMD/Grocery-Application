@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { FiStar, FiThumbsUp, FiImage, FiPlus, FiChevronRight, FiChevronLeft } from 'react-icons/fi';
+import { useAuth } from '../../../contexts/AuthContext';
 import '../../../styles/components/ReviewsSection.css';
 
 const ReviewsSection = ({ product }) => {
+  const { currentUser } = useAuth();
   const storageKey = `reviews_product_${product.id}`;
 
   const [reviews, setReviews] = useState(() => {
@@ -42,6 +44,10 @@ const ReviewsSection = ({ product }) => {
   const removeImage = (id) => setNewReview({...newReview, images: newReview.images.filter((_, i) => i !== id)});
   const removeVideo = (id) => setNewReview({...newReview, videos: newReview.videos.filter((_, i) => i !== id)});
 
+  const averageRating = reviews.length > 0 
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) 
+    : Number(product.rating).toFixed(1);
+
   const getStarDistribution = () => {
     const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     reviews.forEach(r => counts[r.rating]++);
@@ -56,7 +62,7 @@ const ReviewsSection = ({ product }) => {
     e.preventDefault();
     const review = {
       id: Date.now(),
-      user: "Guest User",
+      user: currentUser ? currentUser.name : "Guest User",
       rating: parseInt(newReview.rating),
       date: new Date().toISOString().split('T')[0],
       title: newReview.title,
@@ -82,14 +88,16 @@ const ReviewsSection = ({ product }) => {
           
           <div className="overall-rating-card">
             <div className="rating-number">
-              <span className="big-num">{product.rating}</span>
+              <span className="big-num">{averageRating}</span>
               <span className="small-num">out of 5</span>
             </div>
             <div className="rating-stars-full">
-               {[...Array(5)].map((_, i) => (
-                 <FiStar key={i} className={`star-icon ${i < Math.floor(product.rating) ? 'filled' : ''}`} />
-               ))}
-               <p className="total-ratings-text">{reviews.length * 123} global ratings</p>
+               <div style={{ display: 'flex', gap: '0.2rem', marginBottom: '0.4rem', fontSize: '1.4rem' }}>
+                 {[...Array(5)].map((_, i) => (
+                   <FiStar key={i} className={`star-icon ${i < Math.round(averageRating) ? 'filled' : ''}`} />
+                 ))}
+               </div>
+               <p className="total-ratings-text">{reviews.length} global ratings</p>
             </div>
           </div>
 

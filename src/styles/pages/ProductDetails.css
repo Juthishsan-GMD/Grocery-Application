@@ -93,13 +93,11 @@
 }
 
 .main-image-wrapper:hover {
-  transform: translateY(-5px);
   box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.1);
   border-color: rgba(16, 185, 129, 0.1);
 }
 
 .main-image-wrapper:hover .main-product-image {
-  transform: scale(1.08) rotate(-2deg);
   filter: drop-shadow(0 30px 40px rgba(0,0,0,0.15));
 }
 
@@ -475,4 +473,44 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 2rem;
+}
+
+/* --------------------
+   Amazon-Style Zoom
+--------------------- */
+.amazon-zoom-pane {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 4rem);
+  width: 100%;
+  height: 520px;
+  background-color: #fff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 40px 80px -20px rgba(0,0,0,0.25);
+  border-radius: 32px;
+  background-repeat: no-repeat;
+  z-index: 1000;
+  pointer-events: none;
+  animation: fadeInZoom 0.2s ease-out forwards;
+}
+
+@keyframes fadeInZoom {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.zoom-lens {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  border: 2px solid rgba(16, 185, 129, 0.4);
+  background: rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  border-radius: 12px;
+  backdrop-filter: brightness(1.05);
+}
+
+.main-image-wrapper.zooming {
+  cursor: crosshair;
 }

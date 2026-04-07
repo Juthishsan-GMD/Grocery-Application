@@ -42,9 +42,9 @@ const Shop = () => {
 
   // Filter products based on selected category
   const filteredProducts = useMemo(() => {
-    if (activeCategory === 'All') return products;
+    if (!activeCategory || activeCategory === 'All') return products;
     return products.filter(p => 
-      String(p.category || '').trim() === String(activeCategory).trim()
+      String(p.category || '').toLowerCase().trim() === String(activeCategory).toLowerCase().trim()
     );
   }, [products, activeCategory]);
 
@@ -84,15 +84,19 @@ const Shop = () => {
                   >
                     Display All
                   </div>
-                  {dynamicCategories.map(cat => (
-                    <div 
-                      key={cat}
-                      className={`accordion-link ${activeCategory === cat ? 'active-link' : ''}`}
-                      onClick={() => setActiveCategory(cat)}
-                    >
-                      {cat}
-                    </div>
-                  ))}
+                  {dynamicCategories.map(cat => {
+                    const isActive = String(activeCategory).toLowerCase() === String(cat).toLowerCase();
+                    const displayCat = cat.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                    return (
+                      <div 
+                        key={cat}
+                        className={`accordion-link ${isActive ? 'active-link' : ''}`}
+                        onClick={() => setActiveCategory(cat)}
+                      >
+                        {displayCat}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -126,7 +130,7 @@ const Shop = () => {
         <main className="shop-main">
           <div className="shop-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', background: '#fff', padding: '1rem', borderRadius: '12px' }}>
             <div className="results-count">
-              Found <strong>{sortedProducts.length}</strong> items {activeCategory !== 'All' ? `in ${activeCategory}` : ''}
+              Found <strong>{sortedProducts.length}</strong> items {activeCategory !== 'All' ? `in ${String(activeCategory).split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}` : ''}
             </div>
             <div className="sort-by" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Sort:</label>

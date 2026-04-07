@@ -33,11 +33,11 @@ const Home = () => {
             </div>
             <div className="hero-stats">
               <div className="stat-item">
-                <h4>15k+</h4>
+                <h4>5k+</h4>
                 <p>Products</p>
               </div>
               <div className="stat-item">
-                <h4>50k+</h4>
+                <h4>10k+</h4>
                 <p>Customers</p>
               </div>
               <div className="stat-item">
@@ -93,7 +93,14 @@ const Home = () => {
           </div>
           
           <div className="deals-grid">
-            {products.filter(p => p.discount && p.discount > 0).map((product) => (
+            {products.filter(p => {
+              if (Number(p.discount) > 0) return true;
+              const hasVariants = p.variants && p.variants.length > 0;
+              const defaultVariant = hasVariants ? p.variants[0] : { price: p.price, mrp: p.mrp };
+              const currentPrice = Number(defaultVariant.price) || 0;
+              const currentMrp = Number(defaultVariant.mrp) || currentPrice;
+              return currentMrp > currentPrice;
+            }).slice(0, 5).map((product) => (
               <ProductCard key={product.id} product={product} cardType="home" />
             ))}
           </div>
@@ -115,7 +122,7 @@ const Home = () => {
             ) : (
               <div className="full-width-msg" style={{ gridColumn: '1/-1', textAlign: 'center', padding: '3rem', background: '#f9fafb', borderRadius: '24px', border: '2px dashed #e5e7eb' }}>
                 <p className="msg-text" style={{ fontSize: '1.1rem', color: '#6b7280', marginBottom: '1rem' }}>No products uploaded by the administrator yet.</p>
-                <button className="btn btn-primary" onClick={() => navigate('/admin/products/add')}>Add First Product</button>
+                {/* <button className="btn btn-primary" onClick={() => navigate('/admin/products/add')}>Add First Product</button> */}
               </div>
             )}
           </div>

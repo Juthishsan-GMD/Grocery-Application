@@ -8,7 +8,7 @@ import '../../styles/pages/CheckoutPage.css';
 // ── GST rate ──────────────────────────────────────────────────
 const GST_RATE = 0.05; // 5%
 const PLATFORM_FEE = 5.00; // Flat ₹5 platform fee
-const COD_CHARGE = 30.00; // Extra charge for COD
+const COD_CHARGE = 10.00; // Extra charge for COD
 const COUPONS = {
   DIVINE10:  { type: 'percent', value: 10,  label: '10% off' },
   FIRST50:   { type: 'flat',    value: 50,  label: '₹50 off' },
@@ -77,7 +77,7 @@ const OrderSummary = ({ cartItems, couponCode, setCouponCode, couponApplied, set
 
   const subtotal  = cartItems.reduce((s, i) => s + i.price * (i.quantity || 1), 0);
   const savings   = cartItems.reduce((s, i) => s + ((i.originalPrice ?? i.price) - i.price) * (i.quantity || 1), 0);
-  const delivery  = subtotal >= 499 ? 0 : 49;
+  const delivery  = subtotal >= 499 ? 0 : 40;
   const gst       = subtotal * GST_RATE;
 
   let couponDisc = 0;
@@ -362,26 +362,8 @@ const PaymentStep = ({ onNext, onBack, method, setMethod, card, setCard, upi, se
   };
 
   const handleNext = () => {
-    const newErr = {};
-    if (method === 'card') {
-      const cardErr   = validate.card(card.number);
-      const expiryErr = validate.expiry(card.expiry);
-      const cvvErr    = validate.cvv(card.cvv);
-      if (cardErr)   newErr.number = cardErr;
-      if (expiryErr) newErr.expiry = expiryErr;
-      if (cvvErr)    newErr.cvv    = cvvErr;
-      if (!card.name.trim()) newErr.cardName = 'Cardholder name is required';
-    } else if (method === 'upi') {
-      const upiErr = validate.upi(upi);
-      if (upiErr) newErr.upi = upiErr;
-    } else if (method === 'netbanking') {
-      if (!net) newErr.net = 'Please select a bank';
-    }
-    if (Object.keys(newErr).length) { setErrors(newErr); return; }
     onNext();
   };
-
-  const banks = ['State Bank of India', 'HDFC Bank', 'ICICI Bank', 'Axis Bank', 'Kotak Mahindra Bank', 'Bank of Baroda', 'Punjab National Bank', 'Canara Bank'];
 
   const PayMethod = ({ id, icon, label }) => (
     <button
@@ -397,15 +379,13 @@ const PaymentStep = ({ onNext, onBack, method, setMethod, card, setCard, upi, se
     <div className="chk-step-body">
       <Section title="Select Payment Method">
         <div className="chk-pay-methods">
-          <PayMethod id="card"       icon={<FiCreditCard size={18} />}  label="Card" />
-          <PayMethod id="upi"        icon={<FiSmartphone size={18} />}  label="UPI" />
-          <PayMethod id="netbanking" icon={<FiHome size={18} />}   label="Net Banking" />
-          <PayMethod id="wallet"     icon={<FiCreditCard size={18} />}      label="Wallet" />
+          <PayMethod id="prepaid"    icon={<FiCreditCard size={18} />}  label="Secure Online Payment" />
           <PayMethod id="cod"        icon={<FiTruck size={18} />}       label="Cash on Delivery" />
         </div>
       </Section>
 
-      {/* CARD */}
+      {/* MANUAL PAYMENT FORMS (Commented for Backup) */}
+      {/* 
       {method === 'card' && (
         <Section title="Card Details">
           <div className="chk-card-preview">
@@ -447,7 +427,6 @@ const PaymentStep = ({ onNext, onBack, method, setMethod, card, setCard, upi, se
         </Section>
       )}
 
-      {/* UPI */}
       {method === 'upi' && (
         <Section title="UPI Payment">
           <div className="chk-upi-apps">
@@ -473,7 +452,6 @@ const PaymentStep = ({ onNext, onBack, method, setMethod, card, setCard, upi, se
         </Section>
       )}
 
-      {/* NET BANKING */}
       {method === 'netbanking' && (
         <Section title="Select Your Bank">
           <div className="chk-bank-grid">
@@ -499,7 +477,6 @@ const PaymentStep = ({ onNext, onBack, method, setMethod, card, setCard, upi, se
         </Section>
       )}
 
-      {/* WALLET */}
       {method === 'wallet' && (
         <Section title="Select Wallet">
           <div className="chk-bank-grid">
@@ -518,6 +495,22 @@ const PaymentStep = ({ onNext, onBack, method, setMethod, card, setCard, upi, se
                 <span style={{ fontSize: '0.75rem', textAlign: 'center' }}>{w.id}</span>
               </button>
             ))}
+          </div>
+        </Section>
+      )}
+      */}
+
+      {method === 'prepaid' && (
+        <Section title="Secure Online Payment">
+          <div className="chk-cod-info">
+             <p>🚀 Fast, Secure & Reliable.</p>
+             <p>Pay via UPI, Cards, NetBanking or Wallets on the next page.</p>
+             <div className="chk-card-types" style={{marginTop: '12px'}}>
+                <span className="chk-card-type visa">UPI</span>
+                <span className="chk-card-type mc">CARDS</span>
+                <span className="chk-card-type rupay">BANKS</span>
+                <span className="chk-card-type amex">WALLETS</span>
+             </div>
           </div>
         </Section>
       )}
@@ -546,7 +539,7 @@ const PaymentStep = ({ onNext, onBack, method, setMethod, card, setCard, upi, se
 const ConfirmStep = ({ delivery, cartItems, couponApplied, onBack, onPlace, isProcessing, paymentMethod }) => {
   const subtotal   = cartItems.reduce((s, i) => s + i.price * (i.quantity || 1), 0);
   const savings    = cartItems.reduce((s, i) => s + ((i.originalPrice ?? i.price) - i.price) * (i.quantity || 1), 0);
-  const deliveryFee = subtotal >= 499 ? 0 : 49;
+  const deliveryFee = subtotal >= 499 ? 0 : 40;
   const gst        = subtotal * GST_RATE;
   let couponDisc   = 0;
   if (couponApplied && COUPONS[couponApplied]) {
@@ -637,7 +630,7 @@ const CheckoutPage = () => {
   const [placed,        setPlaced]        = useState(false);
 
   // Payment states lifted for global summary access
-  const [method, setMethod] = useState('card');
+  const [method, setMethod] = useState('prepaid');
   const [card,   setCard]   = useState({ number: '', expiry: '', cvv: '', name: '' });
   const [upi,    setUpi]    = useState('');
   const [upiApp, setUpiApp] = useState('');
@@ -653,10 +646,70 @@ const CheckoutPage = () => {
   }, [step]);
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const deliveryInfo = delivery; // Capture current delivery state
 
   const handlePlace = () => {
-    setIsProcessing(true);
-    const id = 'ORD-' + Date.now().toString().slice(-8);
+    // Determine if it's COD or Online Payment
+    const isCOD = method === 'cod';
+    
+    if (!isCOD) {
+      if (!window.Razorpay) {
+        alert("Razorpay implementation is currently loading. Please wait a moment or try refreshing.");
+        return;
+      }
+      
+      setIsProcessing(true);
+      
+      // We calculate the total exactly as done in OrderSummary
+      const subtotal  = cartItems.reduce((s, i) => s + i.price * (i.quantity || 1), 0);
+      const delivery_fee = subtotal >= 499 ? 0 : 40;
+      const gst       = subtotal * GST_RATE;
+      let couponDisc = 0;
+      if (couponApplied && COUPONS[couponApplied]) {
+        const c = COUPONS[couponApplied];
+        if (c.type === 'percent') couponDisc = subtotal * c.value / 100;
+        else if (c.type === 'flat') couponDisc = (couponApplied === 'SAVE100' && subtotal < 999) ? 0 : c.value;
+      }
+      const totalPayable = subtotal + delivery_fee + gst + PLATFORM_FEE - couponDisc;
+
+      const options = {
+        key: process.env.REACT_APP_RAZORPAY_KEY_ID || "rzp_test_placeholder", 
+        amount: Math.round(totalPayable * 100), // Amount in paise
+        currency: "INR",
+        name: "FreshBasket™",
+        description: `Order for ${deliveryInfo.name}`,
+        image: "https://freshbasket-grocery.vercel.app/favicon.svg",
+        handler: function (response) {
+          // Success Callback
+          const id = 'ORD-' + Date.now().toString().slice(-8);
+          processOrderSuccess(id);
+        },
+        prefill: {
+          name: deliveryInfo.name,
+          email: deliveryInfo.email,
+          contact: deliveryInfo.phone
+        },
+        theme: {
+          color: "#10b981"
+        },
+        modal: {
+          ondismiss: function() {
+            setIsProcessing(false);
+          }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } else {
+      // Normal COD Flow
+      setIsProcessing(true);
+      const id = 'ORD-' + Date.now().toString().slice(-8);
+      processOrderSuccess(id);
+    }
+  };
+
+  const processOrderSuccess = (id) => {
     setOrderId(id);
     
     const SERVICE_ID = process.env.REACT_APP_EMAILJS_SERVICE_ID;
@@ -677,7 +730,7 @@ const CheckoutPage = () => {
     `).join('');
 
     const subtotal = cartItems.reduce((s, i) => s + i.price * (i.quantity || 1), 0);
-    const deliveryFee = subtotal >= 499 ? 0 : 49;
+    const deliveryFee = subtotal >= 499 ? 0 : 40;
     const gstRate = 0.05;
     const gst = subtotal * gstRate;
     const total = subtotal + deliveryFee + gst + 5.00; // Manual calc for email total to match UI logic (5 platform fee)
@@ -703,7 +756,6 @@ const CheckoutPage = () => {
         })
         .catch(err => {
           console.error('EmailJS Error Details:', err?.text || err);
-          alert('Could not send the email receipt. Reason: ' + (err?.text || 'Invalid Template ID or EmailJS Config.'));
         })
         .finally(() => {
           setIsProcessing(false);

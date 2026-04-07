@@ -24,8 +24,10 @@ const ProductDetails = () => {
   const { addToCart } = useCart();
   const [product, setProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
   const [activeImage, setActiveImage] = useState(null);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [zoomParams, setZoomParams] = useState(null);
 
   useEffect(() => {
     if (!id || !products.length) return;
@@ -34,20 +36,17 @@ const ProductDetails = () => {
     if (foundProduct) {
       setProduct(foundProduct);
       setActiveImage(foundProduct.image || foundProduct.images?.[0] || '');
+      setActiveIdx(0);
       
       const variants = foundProduct.variants || [];
-      if (variants.length > 0) {
-        setSelectedVariant(variants[0]);
-      } else {
-        setSelectedVariant({ 
-          unit: foundProduct.unit || '1 pc', 
-          price: Number(foundProduct.price) || 0 
-        });
-      }
+      setSelectedVariantIdx(0);
     }
   }, [id, products]);
 
-  if (!product) {
+  const hasVariants = product?.variants && product.variants.length > 0;
+  const selectedVariant = product ? (hasVariants && product.variants[selectedVariantIdx] ? product.variants[selectedVariantIdx] : { unit: product.unit || '1 pc', price: Number(product.price) || 0, mrp: Number(product.mrp) || Number(product.price) || 0 }) : null;
+
+  if (!product || !selectedVariant) {
     return (
       <div className="product-details-loading">
         <div className="loader"></div>
@@ -56,9 +55,24 @@ const ProductDetails = () => {
     );
   }
 
+  const savedReviews = localStorage.getItem(`reviews_product_${product.id}`);
+  const customReviews = savedReviews ? JSON.parse(savedReviews) : [];
+  const allReviews = [...customReviews, ...(product.reviews || [])];
+  const dynamicRating = allReviews.length > 0 
+    ? (allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length).toFixed(1) 
+    : Number(product.rating || 4.5).toFixed(1);
+  const reviewsCount = allReviews.length;
+
+  let dynamicDiscount = Number(product.discount) || 0;
+  const currentPrice = Number(selectedVariant.price) || Number(product.price) || 0;
+  const currentMrp = Number(selectedVariant.mrp) || Number(product.mrp) || currentPrice;
+  if (!dynamicDiscount && currentMrp > currentPrice) {
+    dynamicDiscount = Math.round(((currentMrp - currentPrice) / currentMrp) * 100);
+  }
+
   const handleAddToCart = () => {
-    const isDiscounted = product.discount > 0;
-    const sellPrice = isDiscounted ? selectedVariant.price * (1 - product.discount / 100) : selectedVariant.price;
+    const isLegacyDiscount = Number(product.discount) > 0 && currentMrp === currentPrice;
+    const sellPrice = isLegacyDiscount ? selectedVariant.price * (1 - Number(product.discount) / 100) : selectedVariant.price;
     const customizedProduct = { ...product, price: sellPrice, unit: selectedVariant.unit };
     addToCart(customizedProduct, `Added ${quantity} ${product.name} to your cart successfully!`);
     
@@ -67,6 +81,30 @@ const ProductDetails = () => {
         addToCart(customizedProduct, null, true); // Suppress duplicate toasts on loops
       }
     }
+  };
+
+  const handleMouseMove = (e) => {
+    const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
+    const xRaw = e.clientX - left;
+    const yRaw = e.clientY - top;
+
+    const x = Math.max(0, Math.min(xRaw, width));
+    const y = Math.max(0, Math.min(yRaw, height));
+
+    const xPercent = (x / width) * 100;
+    const yPercent = (y / height) * 100;
+
+    // lens size is 150px (75px half offset)
+    setZoomParams({
+      xPercent,
+      yPercent,
+      lensLeft: x - 75,
+      lensTop: y - 75,
+    });
+  };
+
+  const handleMouseLeave = () => {
+    setZoomParams(null);
   };
 
   return (
@@ -80,21 +118,47 @@ const ProductDetails = () => {
         <div className="product-view-container">
           
           {/* Left: Product Image Gallery */}
-          <div className="product-gallery">
-            <div className="main-image-wrapper">
-              {product.discount && <span className="pdp-discount-badge">{product.discount}</span>}
+          <div className="product-gallery" style={{ position: 'relative' }}>
+            <div 
+              className={`main-image-wrapper ${zoomParams ? 'zooming' : ''}`}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+            >
+              {dynamicDiscount > 0 && <span className="pdp-discount-badge">{dynamicDiscount}% OFF</span>}
               <img src={activeImage} alt={product.name} className="main-product-image" key={activeImage} />
+              
+              {zoomParams && (
+                <div 
+                  className="zoom-lens" 
+                  style={{
+                    left: zoomParams.lensLeft,
+                    top: zoomParams.lensTop
+                  }} 
+                />
+              )}
             </div>
             
+            {/* Amazon Zoom Overlay Pane */}
+            {zoomParams && (
+              <div 
+                className="amazon-zoom-pane"
+                style={{
+                  backgroundImage: `url(${activeImage})`,
+                  backgroundPosition: `${zoomParams.xPercent}% ${zoomParams.yPercent}%`,
+                  backgroundSize: '250% 250%'
+                }}
+              />
+            )}
+            
             <div className="thumbnail-track">
-              {[product.image, product.image, product.image].map((img, idx) => (
+              {(product.images || [product.image, product.image, product.image]).map((img, idx) => (
                 <div 
                   key={idx} 
-                  className={`thumbnail ${activeImage === img && idx === 0 ? 'active' : ''}`}
-                  onClick={() => setActiveImage(img)}
+                  className={`thumbnail ${activeIdx === idx ? 'active' : ''}`}
+                  onClick={() => { setActiveImage(img); setActiveIdx(idx); }}
                 >
                   <img src={img} alt={`Thumb ${idx}`} />
-                  {activeImage !== img && <div className="thumbnail-overlay"></div>}
+                  {activeIdx !== idx && <div className="thumbnail-overlay"></div>}
                 </div>
               ))}
             </div>
@@ -113,7 +177,7 @@ const ProductDetails = () => {
                 >
                   {product.category}
                 </span>
-                {product.rating >= 4.7 && (
+                {dynamicRating >= 4.7 && (
                   <span className="best-seller-tag">
                     🔥 Best Seller
                   </span>
@@ -123,13 +187,11 @@ const ProductDetails = () => {
               
               <div className="pdp-rating-row">
                 <div className="pdp-stars">
-                  <FiStar className="star-icon filled" />
-                  <FiStar className="star-icon filled" />
-                  <FiStar className="star-icon filled" />
-                  <FiStar className="star-icon filled" />
-                  <span className="star-icon-half"><FiStar className="star-icon filled" /></span>
+                  {[...Array(5)].map((_, i) => (
+                    <FiStar key={i} className={`star-icon ${i < Math.round(dynamicRating) ? 'filled' : ''}`} />
+                  ))}
                 </div>
-                <span className="pdp-rating-text">{product.rating} / 5.0 (128 Reviews)</span>
+                <span className="pdp-rating-text">{dynamicRating} / 5.0 ({reviewsCount} Reviews)</span>
                 <span className="order-count-tag">
                    📦 <b>{(product.id * 7) % 500 + 120}+</b> orders recently
                 </span>
@@ -138,13 +200,13 @@ const ProductDetails = () => {
 
             <div className="pdp-price-row">
               <div className="price-block">
-                {product.discount > 0 ? (
+                {dynamicDiscount > 0 ? (
                   <div className="pdp-deal-wrapper" style={{ display: 'flex', alignItems: 'baseline', gap: '1rem' }}>
                     <span className="current-price" style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '1.5rem', fontWeight: 600 }}>
-                      ₹{selectedVariant.price.toFixed(0)}
+                      ₹{currentMrp.toFixed(0)}
                     </span>
                     <span className="current-price">
-                      ₹{(selectedVariant.price * (1 - product.discount / 100)).toFixed(2)}
+                      ₹{(Number(product.discount) > 0 && currentMrp === currentPrice ? currentPrice * (1 - Number(product.discount) / 100) : currentPrice).toFixed(2)}
                     </span>
                   </div>
                 ) : (
@@ -187,14 +249,19 @@ const ProductDetails = () => {
                 <h4 style={{ marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Select Size/Weight:</h4>
                 <div style={{ width: '100%', fontSize: '1.05rem' }}>
                   <CustomSelect 
-                    value={product.variants.indexOf(product.variants.find(v => v.unit === selectedVariant.unit))}
-                    onChange={(val) => setSelectedVariant(product.variants[val])}
+                    value={selectedVariantIdx}
+                    onChange={(val) => setSelectedVariantIdx(val)}
                     options={product.variants.map((v, idx) => {
-                      const isDiscounted = product.discount > 0;
-                      const vSellPrice = isDiscounted ? v.price * (1 - product.discount / 100) : v.price;
+                      const vPrice = Number(v.price) || 0;
+                      const vMrp = Number(v.mrp) || vPrice;
+                      const isLegacyDiscount = Number(product.discount) > 0 && vMrp === vPrice;
+                      let disc = Number(product.discount) || 0;
+                      if (!isLegacyDiscount && vMrp > vPrice) disc = Math.round(((vMrp - vPrice) / vMrp) * 100);
+                      const isDiscounted = disc > 0;
+                      const vSellPrice = isLegacyDiscount ? vPrice * (1 - disc / 100) : vPrice;
                       const priceLabel = isDiscounted 
-                        ? <><span style={{textDecoration: 'line-through', color: '#9ca3af', fontSize: '0.9em'}}>₹{v.price.toFixed(0)}</span> <span style={{color: 'var(--primary-color)', fontWeight: 800}}>₹{vSellPrice.toFixed(2)}</span></>
-                        : `₹${v.price.toFixed(2)}`;
+                        ? <><span style={{textDecoration: 'line-through', color: '#9ca3af', fontSize: '0.9em'}}>₹{(vMrp || vPrice).toFixed(0)}</span> <span style={{color: 'var(--primary-color)', fontWeight: 800}}>₹{vSellPrice.toFixed(2)}</span></>
+                        : `₹${vPrice.toFixed(2)}`;
                       return {
                         value: idx,
                         label: <span style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}>{v.unit} - {priceLabel}</span>
@@ -226,7 +293,7 @@ const ProductDetails = () => {
 
               <button className="btn btn-primary pdp-add-cart-btn" onClick={handleAddToCart}>
                 <FiShoppingCart className="btn-icon" /> Add to Cart — ₹{
-                  ((product.discount > 0 ? selectedVariant.price * (1 - product.discount / 100) : selectedVariant.price) * quantity).toFixed(2)
+                  ((Number(product.discount) > 0 && currentMrp === currentPrice ? selectedVariant.price * (1 - Number(product.discount) / 100) : selectedVariant.price) * quantity).toFixed(2)
                 }
               </button>
             </div>

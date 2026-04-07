@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useCallback, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { ArrowLeft, Upload, X, Plus, Image as ImageIcon, CheckCircle2, AlertCircle, ShoppingBasket } from "lucide-react";
@@ -23,20 +23,69 @@ const selectClass = "flex h-12 w-full rounded-xl border border-input bg-backgrou
 
 export default function AddProductPage() {
   const navigate = useNavigate();
-  const { addProduct, clearAllProducts } = useProducts();
+  const { id } = useParams();
+  const isEditMode = Boolean(id);
+  const { products, addProduct, updateProduct, clearAllProducts } = useProducts();
   const { toast } = useToast();
 
   const [form, setForm] = useState({
     name: "", sku: "", seller: "FreshBasket", category: "Fresh Vegetables", subCategory: "", price: "", mrp: "", stock: "",
     description: "", unit: "1 kg", images: [], featured: false,
+    variants: [{ unit: "1 kg", price: "", mrp: "", stock: "" }]
   });
   const [errors,     setErrors]     = useState({});
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isEditMode && products.length) {
+      const existing = products.find(p => String(p.id) === String(id));
+      if (existing) {
+        setForm({
+          name: existing.name || "",
+          sku: existing.sku || "",
+          seller: existing.seller || "FreshBasket",
+          category: existing.category || "Fresh Vegetables",
+          subCategory: existing.subCategory || "",
+          price: existing.price || "",
+          mrp: existing.mrp || "",
+          stock: existing.stock || "",
+          description: existing.description || "",
+          unit: existing.unit || "1 kg",
+          images: existing.images || (existing.image ? [existing.image] : []),
+          featured: existing.featured || false,
+          variants: existing.variants && existing.variants.length > 0 ? existing.variants : [{ unit: existing.unit || "1 kg", price: existing.price || "", mrp: existing.mrp || "", stock: existing.stock || "" }]
+        });
+      }
+    }
+  }, [id, products, isEditMode]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm((p) => ({ ...p, [name]: type === "checkbox" ? checked : value }));
     if (errors[name]) setErrors((p) => ({ ...p, [name]: "" }));
+  };
+
+  const handleVariantChange = (index, field, value) => {
+    setForm(p => {
+      const newVars = [...p.variants];
+      newVars[index][field] = value;
+      // Sync first variant with root fields for easy backwards compatibility
+      if (index === 0) {
+        return { ...p, variants: newVars, [field]: value };
+      }
+      return { ...p, variants: newVars };
+    });
+    if (errors[field]) setErrors(p => ({ ...p, [field]: "" }));
+  };
+
+  const addVariant = () => {
+    setForm(p => ({ ...p, variants: [...p.variants, { unit: "500 g", price: "", mrp: "", stock: "50" }] }));
+  };
+
+  const removeVariant = (index) => {
+    if (form.variants.length > 1) {
+      setForm(p => ({ ...p, variants: p.variants.filter((_, i) => i !== index) }));
+    }
   };
 
   const handleCategoryChange = (e) => {
@@ -85,8 +134,14 @@ export default function AddProductPage() {
     const mrp      = Number(form.mrp);
     const discount = mrp > 0 ? Math.round(((mrp - price) / mrp) * 100) : 0;
 
+    const formattedVariants = form.variants.map((v, i) => ({
+      unit: v.unit || (i === 0 ? form.unit : "1 pc"),
+      price: Number(v.price) || price,
+      mrp: Number(v.mrp) || mrp,
+      stock: Number(v.stock) || 0
+    }));
+
     const product = {
-      id:            `local-${Date.now()}`,
       sku:           form.sku.trim() || `GRO-${Date.now()}`,
       name:          form.name.trim(),
       seller:        form.seller.trim(),
@@ -94,35 +149,44 @@ export default function AddProductPage() {
       subCategory:   form.subCategory,
       price,
       mrp,
-      stock:         Number(form.stock),
+      stock:         form.variants.reduce((acc, v) => acc + Number(v.stock || form.stock), 0),
       description:   form.description.trim(),
       image:         form.images[0],
       images:        form.images,
       discount,
       unit:          form.unit,
+      variants:      formattedVariants,
       rating:        4.5,
       featured:      form.featured,
-      isNew:         true,
     };
 
-    const result = await addProduct(product);
-    setSubmitting(false);
+    if (!isEditMode) {
+      product.id = `local-${Date.now()}`;
+      product.isNew = true;
+      const result = await addProduct(product);
+      setSubmitting(false);
 
-    if (result.ok) {
-      toast({ title: "✅ Product Live!", description: `${product.name} is now available in the store.` });
-      navigate("/admin/products");
-      return;
-    }
-
-    if (result.reason === "quota") {
-      if (window.confirm("Browser storage is full. Clear old products to continue?")) {
-        clearAllProducts();
-        toast({ title: "Storage Cleared", description: "Please try adding the product again." });
+      if (result.ok) {
+        toast({ title: "✅ Product Live!", description: `${product.name} is now available in the store.` });
+        navigate("/admin/products");
+        return;
       }
-      return;
+      
+      if (result.reason === "quota") {
+        if (window.confirm("Browser storage is full. Clear old products to continue?")) {
+          clearAllProducts();
+          toast({ title: "Storage Cleared", description: "Please try adding the product again." });
+        }
+        return;
+      }
+      
+      toast({ title: "Error", description: "Could not save. Try using smaller images.", variant: "destructive" });
+    } else {
+      updateProduct(id, product);
+      setSubmitting(false);
+      toast({ title: "✅ Product Updated!", description: `${product.name} has been successfully updated.` });
+      navigate("/admin/products");
     }
-
-    toast({ title: "Error", description: "Could not save. Try using smaller images.", variant: "destructive" });
   };
 
   const currentSubcategories = subcategoryOptions[form.category] || [];
@@ -135,14 +199,14 @@ export default function AddProductPage() {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Add Fresh Item</h1>
-            <p className="text-muted-foreground">List a new grocery product to the marketplace</p>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">{isEditMode ? "Edit Fresh Item" : "Add Fresh Item"}</h1>
+            <p className="text-muted-foreground">{isEditMode ? "Update your grocery product details" : "List a new grocery product to the marketplace"}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
            <Button variant="outline" onClick={() => navigate("/admin/products")}>Discard</Button>
            <Button onClick={handleSubmit} disabled={submitting} className="px-8 border border-primary/20">
-             {submitting ? "Processing..." : "Publish Product"}
+             {submitting ? "Processing..." : (isEditMode ? "Update Product" : "Publish Product")}
            </Button>
         </div>
       </div>
@@ -232,38 +296,46 @@ export default function AddProductPage() {
 
               <div className="h-px bg-border" />
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                <div>
-                  <label className="text-sm font-semibold mb-1.5 block">Sell Price (₹) *</label>
-                  <Input name="price" type="number" value={form.price} onChange={handleChange} placeholder="99" className="h-12 rounded-xl" />
-                  {errors.price && <p className="text-xs text-destructive mt-1.5">{errors.price}</p>}
-                </div>
-                <div>
-                  <label className="text-sm font-semibold mb-1.5 block">MRP (₹) *</label>
-                  <Input name="mrp" type="number" value={form.mrp} onChange={handleChange} placeholder="120" className="h-12 rounded-xl" />
-                  {errors.mrp && <p className="text-xs text-destructive mt-1.5">{errors.mrp}</p>}
-                </div>
-                <div>
-                  <label className="text-sm font-semibold mb-1.5 block">Stock Quantity *</label>
-                  <Input name="stock" type="number" value={form.stock} onChange={handleChange} placeholder="100" className="h-12 rounded-xl" />
-                  {errors.stock && <p className="text-xs text-destructive mt-1.5">{errors.stock}</p>}
-                </div>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold block">Variants (Pricing & Stock) *</label>
+                <Button type="button" variant="outline" size="sm" onClick={addVariant} className="h-8 text-xs px-2"><Plus className="w-4 h-4 mr-1"/> Add Variant</Button>
               </div>
-
-              <div>
-                <label className="text-sm font-semibold mb-1.5 block">Unit/Weight Range *</label>
-                <div className="flex flex-wrap gap-2">
-                  {unitOptions.map((u) => (
-                    <button key={u} type="button" onClick={() => setForm(p => ({ ...p, unit: u }))}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all duration-200 ${
-                        form.unit === u
-                          ? "bg-primary text-primary-foreground border-primary shadow-md scale-105"
-                          : "bg-background text-foreground border-border hover:border-primary/50 hover:bg-secondary"
-                      }`}>
-                      {u}
-                    </button>
-                  ))}
-                </div>
+              
+              <div className="space-y-4">
+                {form.variants.map((v, index) => (
+                  <div key={index} className="p-4 border border-border rounded-xl bg-background/50 relative group">
+                    {index > 0 && (
+                      <button type="button" onClick={() => removeVariant(index)} className="absolute top-2 right-2 text-destructive opacity-50 hover:opacity-100 bg-destructive/10 p-1 rounded-full">
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                    <h4 className="text-xs font-bold mb-3 text-muted-foreground uppercase tracking-wider">Variant {index + 1} {index === 0 && "(Primary)"}</h4>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                      <div>
+                        <label className="text-xs font-semibold mb-1 cursor-pointer block">Unit Weight</label>
+                        <select value={v.unit} onChange={(e) => handleVariantChange(index, "unit", e.target.value)} className={selectClass} style={{ height: '40px' }}>
+                          {unitOptions.map(u => <option key={u} value={u}>{u}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold mb-1 block">Sell Price (₹)</label>
+                        <Input type="number" value={v.price} onChange={(e) => handleVariantChange(index, "price", e.target.value)} placeholder="99" className="h-10" />
+                        {index === 0 && errors.price && <p className="text-[10px] text-destructive mt-1">{errors.price}</p>}
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold mb-1 block">MRP (₹)</label>
+                        <Input type="number" value={v.mrp} onChange={(e) => handleVariantChange(index, "mrp", e.target.value)} placeholder="120" className="h-10" />
+                        {index === 0 && errors.mrp && <p className="text-[10px] text-destructive mt-1">{errors.mrp}</p>}
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold mb-1 block">Stock Total</label>
+                        <Input type="number" value={v.stock} onChange={(e) => handleVariantChange(index, "stock", e.target.value)} placeholder="100" className="h-10" />
+                        {index === 0 && errors.stock && <p className="text-[10px] text-destructive mt-1">{errors.stock}</p>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

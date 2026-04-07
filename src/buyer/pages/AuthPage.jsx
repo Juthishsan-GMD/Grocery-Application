@@ -9,7 +9,7 @@ const AuthPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { showToast } = useCart();
-  const { adminLogin } = useAuth();
+  const { adminLogin, loginUser } = useAuth();
   
   const [isSignUp, setIsSignUp] = useState(location.pathname === '/signup');
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
@@ -42,12 +42,40 @@ const AuthPage = () => {
       return;
     }
 
-    showToast(isSignUp ? 'Account created successfully!' : 'Welcome back to FreshBasket!');
-    // Save minimal data to clear checkout form
-    if (isSignUp && formData.name) localStorage.setItem('divine_customer_name', formData.name);
-    if (formData.email) localStorage.setItem('divine_customer_email', formData.email);
-    
-    navigate('/');
+    const users = JSON.parse(localStorage.getItem('grocery_users') || '[]');
+
+    if (isSignUp) {
+      const userExists = users.find(u => u.email === formData.email);
+      if (userExists) {
+        showToast('Email already registered! Please sign in.');
+        return;
+      }
+      
+      const newUser = { name: formData.name, email: formData.email, password: formData.password };
+      users.push(newUser);
+      localStorage.setItem('grocery_users', JSON.stringify(users));
+      
+      loginUser({ name: formData.name, email: formData.email, role: 'buyer' });
+      showToast('Account created successfully!');
+      
+      localStorage.setItem('divine_customer_name', formData.name);
+      localStorage.setItem('divine_customer_email', formData.email);
+      
+      navigate('/');
+    } else {
+      const user = users.find(u => u.email === formData.email && u.password === formData.password);
+      if (user) {
+        loginUser({ name: user.name, email: user.email, role: 'buyer' });
+        showToast(`Welcome back, ${user.name}!`);
+        
+        localStorage.setItem('divine_customer_name', user.name);
+        localStorage.setItem('divine_customer_email', user.email);
+        
+        navigate('/');
+      } else {
+        showToast('Invalid email or password.');
+      }
+    }
   };
 
   return (
