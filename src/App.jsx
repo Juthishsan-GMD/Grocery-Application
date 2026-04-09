@@ -37,14 +37,13 @@ import SellerProtectedRoute from './seller/components/SellerProtectedRoute';
 import AccountRedirect from './seller/components/AccountRedirect';
 import Wishlist from './buyer/pages/Wishlist';
 import BuyerProfile from './buyer/pages/BuyerProfile';
-import './styles/base/App.css';
 
 function StoreLayout() {
   const navigate = useNavigate();
   return (
-    <div className="app-container">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main>
+      <main className="flex-1">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/shop" element={<Shop />} />
@@ -61,36 +60,36 @@ function StoreLayout() {
         </Routes>
       </main>
       <Toast />
-      <footer className="footer">
-        <div className="container footer-content">
-          <div className="footer-brand">
-            <a href="/" className="logo">
-              <span className="logo-icon">🛒</span>
-              Fresh<span className="logo-highlight">Basket</span>
+      <footer className="bg-gradient-to-br from-emerald-600 to-emerald-500 pt-20 px-4 md:px-20 mt-16 text-white border-t-0">
+        <div className="container mx-auto flex justify-between flex-wrap gap-12 mb-16">
+          <div className="max-w-[350px]">
+            <a href="/" className="text-white text-[1.8rem] font-extrabold flex items-center gap-2 no-underline">
+              <span className="text-[1.8rem]">🛒</span>
+              Fresh<span className="text-emerald-200">Basket</span>
             </a>
-            <p>Your one-stop shop for fresh, organic, and locally-sourced daily essentials.</p>
+            <p className="text-white/85 mt-5 leading-[1.6]">Your one-stop shop for fresh, organic, and locally-sourced daily essentials.</p>
           </div>
-          <div className="footer-links">
-            <div>
-              <h3>Quick Links</h3>
-              <ul>
-                <li><a href="/about">About Us</a></li>
-                <li><a href="/shop">Shop</a></li>
-                <li><a href="/contact">FAQ</a></li>
-                <li><Link to="/seller">Seller Login</Link></li>
+          <div className="flex gap-8 md:gap-16 flex-1 justify-start md:justify-end flex-wrap">
+            <div className="min-w-[150px]">
+              <h3 className="text-[1.1rem] font-bold mb-6 text-white">Quick Links</h3>
+              <ul className="flex flex-col gap-4 list-none m-0 p-0">
+                <li><a href="/about" className="text-white/75 text-[0.95rem] transition-all duration-300 no-underline hover:text-white hover:pl-1">About Us</a></li>
+                <li><a href="/shop" className="text-white/75 text-[0.95rem] transition-all duration-300 no-underline hover:text-white hover:pl-1">Shop</a></li>
+                <li><a href="/contact" className="text-white/75 text-[0.95rem] transition-all duration-300 no-underline hover:text-white hover:pl-1">FAQ</a></li>
+                <li><Link to="/seller" className="text-white/75 text-[0.95rem] transition-all duration-300 no-underline hover:text-white hover:pl-1">Seller Login</Link></li>
               </ul>
             </div>
-            <div>
-              <h3>Categories</h3>
-              <ul>
-                <li><Link to="/shop" state={{ category: 'Fresh Vegetables' }}>Vegetables</Link></li>
-                <li><Link to="/shop" state={{ category: 'Fresh Fruits' }}>Fruits</Link></li>
-                <li><Link to="/shop" state={{ category: 'Dairy & Eggs' }}>Dairy</Link></li>
+            <div className="min-w-[150px]">
+              <h3 className="text-[1.1rem] font-bold mb-6 text-white">Categories</h3>
+              <ul className="flex flex-col gap-4 list-none m-0 p-0">
+                <li><Link to="/shop" state={{ category: 'Fresh Vegetables' }} className="text-white/75 text-[0.95rem] transition-all duration-300 no-underline hover:text-white hover:pl-1">Vegetables</Link></li>
+                <li><Link to="/shop" state={{ category: 'Fresh Fruits' }} className="text-white/75 text-[0.95rem] transition-all duration-300 no-underline hover:text-white hover:pl-1">Fruits</Link></li>
+                <li><Link to="/shop" state={{ category: 'Dairy & Eggs' }} className="text-white/75 text-[0.95rem] transition-all duration-300 no-underline hover:text-white hover:pl-1">Dairy</Link></li>
               </ul>
             </div>
-            <div>
-              <h3>Contact</h3>
-              <ul>
+            <div className="min-w-[150px]">
+              <h3 className="text-[1.1rem] font-bold mb-6 text-white">Contact</h3>
+              <ul className="flex flex-col gap-4 list-none m-0 p-0 text-white/75 text-[0.95rem]">
                 <li>support@freshbasket.com</li>
                 <li>+91 9876543210</li>
                 <li>Saravampatti, Coimbatore, Tamil Nadu 641001</li>
@@ -98,7 +97,7 @@ function StoreLayout() {
             </div>
           </div>
         </div>
-        <div className="footer-bottom">
+        <div className="text-center py-6 border-t border-white/15 text-white/75 text-[0.9rem]">
           <p>&copy; {new Date().getFullYear()} FreshBasket. All rights reserved.</p>
         </div>
       </footer>

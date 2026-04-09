@@ -6,7 +6,6 @@ import { useCart } from '../../contexts/CartContext';
 import CustomSelect from '../../components/common/CustomSelect';
 import ProductCard from '../components/shop/ProductCard';
 import ReviewsSection from '../components/shop/ReviewsSection';
-import '../../styles/pages/ProductDetails.css';
 
 const categoryColors = {
   'Fresh Vegetables': '#10b981',
@@ -48,8 +47,8 @@ const ProductDetails = () => {
 
   if (!product || !selectedVariant) {
     return (
-      <div className="product-details-loading">
-        <div className="loader"></div>
+      <div className="h-[60vh] flex flex-col items-center justify-center gap-6 text-[#10b981] text-[1.2rem] font-semibold">
+        <div className="w-[50px] h-[50px] border-4 border-emerald-500/20 border-t-[#10b981] rounded-full animate-spin"></div>
         <p>Loading fresh produce...</p>
       </div>
     );
@@ -108,28 +107,28 @@ const ProductDetails = () => {
   };
 
   return (
-    <div className="page-wrapper product-details-page">
+    <div className="pb-24 bg-slate-100 min-h-screen pt-4">
       <div className="container">
         
-        <button className="back-btn" onClick={() => navigate(-1)}>
+        <button className="bg-transparent border-none text-base font-semibold text-gray-500 inline-flex items-center gap-2 cursor-pointer py-2 mb-8 transition-all duration-300 hover:text-[#10b981] hover:-translate-x-1" onClick={() => navigate(-1)}>
           <FiChevronLeft /> Back to Shopping
         </button>
 
-        <div className="product-view-container">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-8 lg:gap-16 bg-white p-8 lg:p-12 rounded-[32px] shadow-[0_30px_60px_-20px_rgba(0,0,0,0.06)] items-start">
           
           {/* Left: Product Image Gallery */}
-          <div className="product-gallery" style={{ position: 'relative' }}>
+          <div className="flex flex-col gap-8 lg:sticky lg:top-[100px]" style={{ position: 'relative' }}>
             <div 
-              className={`main-image-wrapper ${zoomParams ? 'zooming' : ''}`}
+              className={`group bg-white rounded-[32px] overflow-hidden h-[400px] lg:h-[520px] relative flex p-6 md:p-12 border border-black/5 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.05)] transition-all duration-500 hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.1)] hover:border-emerald-500/10 ${zoomParams ? 'cursor-crosshair' : ''}`}
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
             >
-              {dynamicDiscount > 0 && <span className="pdp-discount-badge">{dynamicDiscount}% OFF</span>}
-              <img src={activeImage} alt={product.name} className="main-product-image" key={activeImage} />
+              {dynamicDiscount > 0 && <span className="absolute top-8 left-8 bg-gradient-to-br from-[#ff4c4c] to-[#ff1a1a] text-white py-2.5 px-5 rounded-[14px] font-extrabold text-[0.9rem] z-10 shadow-[0_10px_20px_rgba(255,76,76,0.3)] uppercase tracking-[1px] before:content-['SALE_-'] before:mr-1 before:opacity-80 before:text-[0.75rem]">{dynamicDiscount}% OFF</span>}
+              <img src={activeImage} alt={product.name} className="w-full h-full object-contain transition-all duration-[600ms] drop-shadow-[0_20px_30px_rgba(0,0,0,0.1)] group-hover:drop-shadow-[0_30px_40px_rgba(0,0,0,0.15)]" key={activeImage} />
               
               {zoomParams && (
                 <div 
-                  className="zoom-lens" 
+                  className="absolute w-[150px] h-[150px] border-2 border-emerald-500/40 bg-white/20 pointer-events-none shadow-[0_4px_20px_rgba(0,0,0,0.1)] rounded-xl backdrop-brightness-105" 
                   style={{
                     left: zoomParams.lensLeft,
                     top: zoomParams.lensTop
@@ -141,35 +140,44 @@ const ProductDetails = () => {
             {/* Amazon Zoom Overlay Pane */}
             {zoomParams && (
               <div 
-                className="amazon-zoom-pane"
+                className="absolute top-0 left-[calc(100%+4rem)] w-full h-[520px] bg-white border border-slate-200 shadow-[0_40px_80px_-20px_rgba(0,0,0,0.25)] rounded-[32px] bg-no-repeat z-[1000] pointer-events-none animate-[fadeInZoom_0.2s_ease-out_forwards]"
                 style={{
                   backgroundImage: `url(${activeImage})`,
                   backgroundPosition: `${zoomParams.xPercent}% ${zoomParams.yPercent}%`,
-                  backgroundSize: '250% 250%'
+                  backgroundSize: '250% 250%',
+                  animationName: 'fadeInZoom', // ensure it runs with custom keyframes just visually mapped
+                  animationFillMode: 'forwards'
                 }}
-              />
+              >
+                 <style dangerouslySetInnerHTML={{__html: `
+                    @keyframes fadeInZoom {
+                       from { opacity: 0; transform: scale(0.98); }
+                       to { opacity: 1; transform: scale(1); }
+                    }
+                 `}} />
+              </div>
             )}
             
-            <div className="thumbnail-track">
+            <div className="flex gap-5 justify-start p-2">
               {(product.images || [product.image, product.image, product.image]).map((img, idx) => (
                 <div 
                   key={idx} 
-                  className={`thumbnail ${activeIdx === idx ? 'active' : ''}`}
+                  className={`group w-[95px] h-[95px] rounded-[20px] p-2.5 relative cursor-pointer transition-all duration-400 overflow-hidden ${activeIdx === idx ? 'border-[#10b981] bg-white shadow-[0_10px_20px_rgba(16,185,129,0.15)] border-2' : 'bg-slate-50 border-2 border-slate-200 hover:-translate-y-1 hover:border-emerald-500/20 hover:shadow-[0_10px_20px_rgba(0,0,0,0.05)]'}`}
                   onClick={() => { setActiveImage(img); setActiveIdx(idx); }}
                 >
-                  <img src={img} alt={`Thumb ${idx}`} />
-                  {activeIdx !== idx && <div className="thumbnail-overlay"></div>}
+                  <img src={img} alt={`Thumb ${idx}`} className="w-full h-full object-contain transition-transform duration-300" />
+                  {activeIdx !== idx && <div className="absolute inset-0 bg-gray-50/60 backdrop-blur-[1px] transition-all duration-300 rounded-xl group-hover:bg-white/20"></div>}
                 </div>
               ))}
             </div>
           </div>
 
           {/* Right: Product Information */}
-          <div className="product-info-panel">
-            <div className="pdp-header">
-              <div className="pdp-top-tags">
+          <div className="flex flex-col">
+            <div className="mb-4">
+              <div className="flex items-center gap-4 mb-6">
                 <span 
-                  className="pdp-category" 
+                  className="text-[0.85rem] font-bold uppercase tracking-[1px] py-1.5 px-4 rounded-full inline-block border border-current" 
                   style={{ 
                     backgroundColor: `${categoryColors[product.category] || '#55b746'}15`, 
                     color: categoryColors[product.category] || '#55b746' 
@@ -178,74 +186,74 @@ const ProductDetails = () => {
                   {product.category}
                 </span>
                 {dynamicRating >= 4.7 && (
-                  <span className="best-seller-tag">
+                  <span className="bg-amber-50 text-amber-600 text-[0.85rem] font-bold py-1.5 px-4 rounded-full border border-amber-200 shadow-[0_4px_10px_rgba(217,119,6,0.1)]">
                     🔥 Best Seller
                   </span>
                 )}
               </div>
-              <h1 className="pdp-title">{product.name}</h1>
+              <h1 className="text-[2.2rem] lg:text-[2.8rem] font-black text-gray-900 leading-[1.2] mb-4 tracking-[-0.5px]">{product.name}</h1>
               
-              <div className="pdp-rating-row">
-                <div className="pdp-stars">
+              <div className="flex items-center gap-4 mb-8">
+                <div className="flex gap-1 text-[1.1rem]">
                   {[...Array(5)].map((_, i) => (
-                    <FiStar key={i} className={`star-icon ${i < Math.round(dynamicRating) ? 'filled' : ''}`} />
+                    <FiStar key={i} fill={i < Math.round(dynamicRating) ? 'currentColor' : 'none'} className={i < Math.round(dynamicRating) ? 'text-[#f59e0b]' : 'text-gray-300'} />
                   ))}
                 </div>
-                <span className="pdp-rating-text">{dynamicRating} / 5.0 ({reviewsCount} Reviews)</span>
-                <span className="order-count-tag">
-                   📦 <b>{(product.id * 7) % 500 + 120}+</b> orders recently
+                <span className="text-gray-500 text-[0.95rem] font-semibold">{dynamicRating} / 5.0 ({reviewsCount} Reviews)</span>
+                <span className="text-[0.9rem] text-gray-500 bg-gray-100 py-1 px-3 rounded-lg ml-0 sm:ml-4 border border-gray-200">
+                   📦 <b className="text-gray-900">{(product.id * 7) % 500 + 120}+</b> orders recently
                 </span>
               </div>
             </div>
 
-            <div className="pdp-price-row">
-              <div className="price-block">
+            <div className="flex flex-wrap items-end justify-between mb-6 p-6 bg-gray-50 rounded-[20px] border border-gray-200 gap-4">
+              <div className="flex items-baseline gap-2">
                 {dynamicDiscount > 0 ? (
-                  <div className="pdp-deal-wrapper" style={{ display: 'flex', alignItems: 'baseline', gap: '1rem' }}>
-                    <span className="current-price" style={{ textDecoration: 'line-through', color: '#9ca3af', fontSize: '1.5rem', fontWeight: 600 }}>
+                  <div className="flex items-baseline gap-4" style={{ display: 'flex', alignItems: 'baseline', gap: '1rem' }}>
+                    <span className="text-[1.5rem] font-semibold text-gray-400 line-through">
                       ₹{currentMrp.toFixed(0)}
                     </span>
-                    <span className="current-price">
+                    <span className="text-[2.5rem] font-extrabold text-[#10b981] leading-none">
                       ₹{(Number(product.discount) > 0 && currentMrp === currentPrice ? currentPrice * (1 - Number(product.discount) / 100) : currentPrice).toFixed(2)}
                     </span>
                   </div>
                 ) : (
-                  <span className="current-price">₹{selectedVariant.price.toFixed(2)}</span>
+                  <span className="text-[2.5rem] font-extrabold text-[#10b981] leading-none">₹{selectedVariant.price.toFixed(2)}</span>
                 )}
                 {(!product.variants || product.variants.length === 0) && (
-                  <span className="price-unit">/ {product.unit}</span>
+                  <span className="text-[1.1rem] text-gray-500 font-semibold">/ {product.unit}</span>
                 )}
               </div>
-              <div className="stock-status">
-                <span className="status-dot in-stock"></span> In Stock (Ready to Ship)
+              <div className="flex items-center gap-2 font-bold text-gray-900 text-[0.9rem]">
+                <span className="w-[10px] h-[10px] rounded-full bg-[#10b981] shadow-[0_0_0_3px_rgba(16,185,129,0.2)]"></span> In Stock (Ready to Ship)
               </div>
             </div>
 
-            <p className="pdp-description">
+            <p className="text-[1.1rem] text-gray-500 leading-[1.7] mb-8">
               Experience the finest quality freshness with our hand-picked <strong>{product.name}</strong>. Sourced directly from trusted, sustainable farms, this product undergoes rigorous quality checks to ensure you receive nothing but the absolute best. Perfect for your daily nutritional needs.
             </p>
 
             {/* Premium Trust Badges */}
-            <div className="trust-badges">
-              <div className="trust-badge">
-                <FiCheckCircle className="trust-icon" />
+            <div className="flex flex-col gap-4 mb-8">
+              <div className="flex items-center gap-4 text-[1.05rem] font-semibold text-gray-900">
+                <FiCheckCircle className="text-[#10b981] text-[1.4rem] bg-emerald-500/10 p-1.5 rounded-full w-[35px] h-[35px]" />
                 <span>100% Organic certified</span>
               </div>
-              <div className="trust-badge">
-                <FiTruck className="trust-icon" />
+              <div className="flex items-center gap-4 text-[1.05rem] font-semibold text-gray-900">
+                <FiTruck className="text-[#10b981] text-[1.4rem] bg-emerald-500/10 p-1.5 rounded-full w-[35px] h-[35px]" />
                 <span>Same-day ultra-fast delivery</span>
               </div>
-              <div className="trust-badge">
-                <FiShield className="trust-icon" />
+              <div className="flex items-center gap-4 text-[1.05rem] font-semibold text-gray-900">
+                <FiShield className="text-[#10b981] text-[1.4rem] bg-emerald-500/10 p-1.5 rounded-full w-[35px] h-[35px]" />
                 <span>Freshness guarantee policy</span>
               </div>
             </div>
 
-            <hr className="pdp-divider" />
+            <hr className="border-none h-[2px] bg-gray-200 my-8" />
 
             {/* Variant Layout Integration */}
             {product.variants && product.variants.length > 0 && (
-              <div className="pdp-variant-selector" style={{ marginBottom: '1.5rem' }}>
+              <div className="mb-6">
                 <h4 style={{ marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Select Size/Weight:</h4>
                 <div style={{ width: '100%', fontSize: '1.05rem' }}>
                   <CustomSelect 
@@ -260,7 +268,7 @@ const ProductDetails = () => {
                       const isDiscounted = disc > 0;
                       const vSellPrice = isLegacyDiscount ? vPrice * (1 - disc / 100) : vPrice;
                       const priceLabel = isDiscounted 
-                        ? <><span style={{textDecoration: 'line-through', color: '#9ca3af', fontSize: '0.9em'}}>₹{(vMrp || vPrice).toFixed(0)}</span> <span style={{color: 'var(--primary-color)', fontWeight: 800}}>₹{vSellPrice.toFixed(2)}</span></>
+                        ? <><span style={{textDecoration: 'line-through', color: '#9ca3af', fontSize: '0.9em'}}>₹{(vMrp || vPrice).toFixed(0)}</span> <span style={{color: '#10b981', fontWeight: 800}}>₹{vSellPrice.toFixed(2)}</span></>
                         : `₹${vPrice.toFixed(2)}`;
                       return {
                         value: idx,
@@ -273,25 +281,25 @@ const ProductDetails = () => {
             )}
 
             {/* Action Area */}
-            <div className="pdp-action-area">
-              <div className="quantity-selector-pdp">
+            <div className="flex flex-col sm:flex-row gap-6">
+              <div className="flex items-center bg-gray-100 rounded-2xl p-1.5 sm:p-1.5 border border-gray-200 sm:justify-start justify-center">
                 <button 
-                  className="qty-btn-pdp" 
+                  className="w-[45px] h-[45px] rounded-xl border-none bg-white text-gray-900 text-[1.2rem] flex items-center justify-center cursor-pointer shadow-[0_4px_10px_rgba(0,0,0,0.05)] transition-all duration-200 hover:bg-[#10b981] hover:text-white hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-900 disabled:hover:translate-y-0" 
                   onClick={() => setQuantity(q => Math.max(1, q - 1))}
                   disabled={quantity <= 1}
                 >
                   <FiMinus />
                 </button>
-                <span className="qty-display-pdp">{quantity}</span>
+                <span className="w-[50px] text-center text-[1.25rem] font-extrabold text-gray-900">{quantity}</span>
                 <button 
-                  className="qty-btn-pdp" 
+                  className="w-[45px] h-[45px] rounded-xl border-none bg-white text-gray-900 text-[1.2rem] flex items-center justify-center cursor-pointer shadow-[0_4px_10px_rgba(0,0,0,0.05)] transition-all duration-200 hover:bg-[#10b981] hover:text-white hover:-translate-y-0.5" 
                   onClick={() => setQuantity(q => q + 1)}
                 >
                   <FiPlus />
                 </button>
               </div>
 
-              <button className="btn btn-primary pdp-add-cart-btn" onClick={handleAddToCart}>
+              <button className="flex-1 text-[1.2rem] p-4 rounded-2xl flex justify-center items-center gap-3 shadow-[0_10px_25px_rgba(16,185,129,0.3)] hover:-translate-y-1 hover:shadow-[0_15px_35px_rgba(16,185,129,0.4)] transition-all duration-300 bg-[#10b981] text-white font-bold border-none cursor-pointer" onClick={handleAddToCart}>
                 <FiShoppingCart className="btn-icon" /> Add to Cart — ₹{
                   ((Number(product.discount) > 0 && currentMrp === currentPrice ? selectedVariant.price * (1 - Number(product.discount) / 100) : selectedVariant.price) * quantity).toFixed(2)
                 }
@@ -305,12 +313,12 @@ const ProductDetails = () => {
 
         {/* Similar Products Section */}
         {product && (
-          <div className="similar-products-section">
-            <div className="similar-products-header">
-              <h2>You Might Also Like</h2>
-              <p>Customers who viewed this item also looked at these fresh products.</p>
+          <div className="mt-20 pt-16 border-t-2 border-dashed border-emerald-500/20">
+            <div className="text-center mb-12">
+              <h2 className="text-[2.5rem] font-extrabold text-gray-900 mb-2">You Might Also Like</h2>
+              <p className="text-gray-500 text-[1.1rem]">Customers who viewed this item also looked at these fresh products.</p>
             </div>
-            <div className="similar-products-grid">
+            <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-8">
               {products
                 .filter(p => p.category === product.category && p.id !== product.id)
                 .slice(0, 4)

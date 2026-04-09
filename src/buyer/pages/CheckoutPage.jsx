@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../contexts/CartContext';
 import { FiLock, FiChevronDown, FiChevronUp, FiTag, FiTruck, FiShield, FiCreditCard, FiSmartphone, FiHome, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import emailjs from '@emailjs/browser';
-import '../../styles/pages/CheckoutPage.css';
 
 // ── GST rate ──────────────────────────────────────────────────
 const GST_RATE = 0.05; // 5%
@@ -37,14 +36,16 @@ const STATES = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisga
 
 // ── Step indicator ────────────────────────────────────────────
 const StepBar = ({ step }) => (
-  <div className="chk-steps">
+  <div className="flex items-center justify-center gap-0 pt-10 pb-[30px] px-4 bg-gradient-to-b from-white to-slate-50 border-b border-slate-200">
     {['Delivery', 'Payment', 'Confirm'].map((s, i) => (
       <React.Fragment key={s}>
-        <div className={`chk-step ${step === i + 1 ? 'active' : step > i + 1 ? 'done' : ''}`}>
-          <div className="chk-step-dot">{step > i + 1 ? <FiCheckCircle size={14} /> : i + 1}</div>
+        <div className={`flex flex-col items-center gap-3 text-[0.85rem] font-extrabold relative transition-all duration-400 uppercase tracking-[0.5px] ${step === i + 1 ? 'text-[#10b981]' : step > i + 1 ? 'text-[#10b981]' : 'text-slate-400'}`}>
+          <div className={`w-[42px] h-[42px] rounded-[14px] flex items-center justify-center border-2 text-base font-extrabold shrink-0 transition-all duration-400 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05)] ${step === i + 1 ? 'bg-[#10b981] text-white border-[#10b981] shadow-[0_10px_15px_-3px_rgba(85,183,70,0.3)] -translate-y-0.5' : step > i + 1 ? 'bg-[#10b981] text-white border-[#10b981]' : 'bg-white border-slate-200 text-slate-400'}`}>
+            {step > i + 1 ? <FiCheckCircle size={14} /> : i + 1}
+          </div>
           <span>{s}</span>
         </div>
-        {i < 2 && <div className={`chk-step-line ${step > i + 1 ? 'done' : ''}`} />}
+        {i < 2 && <div className={`w-16 sm:w-[100px] h-1 -mt-[25px] mx-2 sm:mx-[20px] rounded-[10px] transition-all duration-400 ${step > i + 1 ? 'bg-[#10b981] shadow-[0_2px_4px_rgba(16,185,129,0.2)]' : 'bg-slate-200'}`} />}
       </React.Fragment>
     ))}
   </div>
@@ -52,18 +53,18 @@ const StepBar = ({ step }) => (
 
 // ── Section wrapper ───────────────────────────────────────────
 const Section = ({ title, children }) => (
-  <div className="chk-section">
-    <h3 className="chk-section-title">{title}</h3>
+  <div className="bg-white rounded-[24px] p-6 lg:p-8 border border-slate-100 shadow-[0_10px_30px_-5px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.06)] hover:border-slate-200">
+    <h3 className="text-[1.25rem] font-bold text-slate-800 m-0 mb-[25px] flex items-center gap-[10px] before:content-[''] before:w-[5px] before:h-[24px] before:bg-[#10b981] before:rounded-[10px]">{title}</h3>
     {children}
   </div>
 );
 
 // ── Field ─────────────────────────────────────────────────────
 const Field = ({ label, error, children }) => (
-  <div className="chk-field">
-    <label className="chk-label">{label}</label>
+  <div className="mb-4 last:mb-0">
+    <label className="block text-[0.8rem] font-semibold text-gray-500 mb-2">{label}</label>
     {children}
-    {error && <span className="chk-error"><FiAlertCircle size={12} /> {error}</span>}
+    {error && <span className="flex items-center gap-1.5 text-[0.75rem] text-red-500 mt-1.5 font-medium"><FiAlertCircle size={12} /> {error}</span>}
   </div>
 );
 
@@ -112,8 +113,8 @@ const OrderSummary = ({ cartItems, couponCode, setCouponCode, couponApplied, set
   };
 
   return (
-    <div className="chk-summary">
-      <div className="chk-summary-header" onClick={() => setOpen(o => !o)}>
+    <div className="bg-white rounded-[32px] border border-slate-100 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.08)] lg:sticky lg:top-6 overflow-hidden">
+      <div className="p-6 text-[1.2rem] font-extrabold text-slate-800 bg-white border-b border-slate-100 flex justify-between items-center cursor-pointer" onClick={() => setOpen(o => !o)}>
         <span>Order Summary ({cartItems.length} item{cartItems.length > 1 ? 's' : ''})</span>
         {open ? <FiChevronUp size={18} /> : <FiChevronDown size={18} />}
       </div>
@@ -121,105 +122,105 @@ const OrderSummary = ({ cartItems, couponCode, setCouponCode, couponApplied, set
       {open && (
         <>
           {/* Items */}
-          <div className="chk-summary-items">
+          <div className="p-6 flex flex-col gap-5 max-h-[400px] overflow-y-auto scrollbar-thin">
             {cartItems.map(item => (
-              <div key={item.uniqueId} className="chk-sum-item">
-                <div className="chk-sum-img-wrap">
-                  <img src={item.image} alt={item.name} className="chk-sum-img"
+              <div key={item.uniqueId} className="flex items-center gap-4">
+                <div className="relative shrink-0">
+                  <img src={item.image} alt={item.name} className="w-[72px] h-[72px] object-cover rounded-2xl bg-slate-50 border border-slate-100"
                     onError={e => e.target.style.display = 'none'} />
-                  <span className="chk-sum-qty">{item.quantity || 1}</span>
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[24px] h-[24px] bg-slate-800 text-white rounded-lg text-[0.7rem] font-black flex items-center justify-center border-2 border-white">{item.quantity || 1}</span>
                 </div>
-                <div className="chk-sum-info">
-                  <p className="chk-sum-name">{item.name} - {item.unit}</p>
-                  <p className="chk-sum-cat">{item.category}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-base font-extrabold text-slate-800 m-0 mb-0.5 whitespace-nowrap overflow-hidden text-ellipsis">{item.name} - {item.unit}</p>
+                  <p className="text-[0.8rem] font-semibold text-slate-500 m-0">{item.category}</p>
                 </div>
-                <span className="chk-sum-price">₹{fmt(item.price * (item.quantity || 1))}</span>
+                <span className="text-[1.05rem] font-black text-slate-800 shrink-0">₹{fmt(item.price * (item.quantity || 1))}</span>
               </div>
             ))}
           </div>
 
           {/* Coupon */}
-          <div className="chk-coupon-wrap">
-            <div className="chk-coupon-row">
+          <div className="p-4 sm:p-6 sm:py-4 border-b border-gray-200 bg-gray-50 flex flex-col">
+            <div className="flex items-center gap-3 text-gray-500">
               <FiTag size={15} />
               {couponApplied ? (
-                <div className="chk-coupon-applied">
-                  <span className="chk-coupon-tag">{couponApplied} applied ✓</span>
-                  <button className="chk-coupon-remove" onClick={handleRemoveCoupon}>Remove</button>
+                <div className="flex items-center gap-2.5 flex-1">
+                  <span className="text-[0.85rem] font-bold text-[#10b981] bg-emerald-50 py-1.5 px-3 rounded-lg border border-dashed border-emerald-300">{couponApplied} applied ✓</span>
+                  <button className="text-[0.8rem] text-red-500 bg-transparent border-none cursor-pointer font-medium" onClick={handleRemoveCoupon}>Remove</button>
                 </div>
               ) : (
                 <>
-                  <input className="chk-coupon-input" placeholder="Enter coupon code"
+                  <input className="flex-1 py-2.5 px-3.5 border border-gray-300 rounded-[10px] text-[0.9rem] text-gray-900 bg-white outline-none font-medium focus:border-[#10b981]" placeholder="Enter coupon code"
                     value={inputCode} onChange={e => { setInputCode(e.target.value.toUpperCase()); setCouponError(''); }} />
-                  <button className="chk-coupon-btn" onClick={handleApplyCoupon}>Apply</button>
+                  <button className="py-2.5 px-[18px] bg-gray-900 text-white border-none rounded-[10px] text-[0.85rem] font-semibold cursor-pointer transition-all duration-200 hover:bg-gray-700" onClick={handleApplyCoupon}>Apply</button>
                 </>
               )}
             </div>
-            {couponError && <p className="chk-coupon-error">{couponError}</p>}
-            <p className="chk-coupon-hint">Try: DIVINE10 · FIRST50 · SAVE100</p>
+            {couponError && <p className="text-[0.75rem] text-red-500 mt-2 font-medium">{couponError}</p>}
+            <p className="text-[0.75rem] text-gray-500 mt-2">Try: DIVINE10 · FIRST50 · SAVE100</p>
           </div>
 
           {/* Price rows */}
-          <div className="chk-price-rows">
-            <div className="chk-price-row">
+          <div className="p-6 border-b border-gray-200 flex flex-col gap-1.5">
+            <div className="flex justify-between text-[0.9rem] py-1 text-gray-500">
               <span>Subtotal ({cartItems.reduce((n, i) => n + (i.quantity || 1), 0)} items)</span>
               <span>₹{fmt(subtotal)}</span>
             </div>
             {savings > 0 && (
-              <div className="chk-price-row green">
+              <div className="flex justify-between text-[0.9rem] py-1 text-[#10b981] font-semibold">
                 <span>Product Discount</span>
                 <span>−₹{fmt(savings)}</span>
               </div>
             )}
             {couponDisc > 0 && (
-              <div className="chk-price-row green">
+              <div className="flex justify-between text-[0.9rem] py-1 text-[#10b981] font-semibold">
                 <span>Coupon ({couponApplied})</span>
                 <span>−₹{fmt(couponDisc)}</span>
               </div>
             )}
-            <div className="chk-price-row">
+            <div className="flex justify-between text-[0.9rem] py-1 text-gray-500">
               <span>Item Total ({cartItems.reduce((n, i) => n + (i.quantity || 1), 0)} items)</span>
               <span>₹{fmt(subtotal)}</span>
             </div>
             {savings > 0 && (
-              <div className="chk-price-row green">
+              <div className="flex justify-between text-[0.9rem] py-1 text-[#10b981] font-semibold">
                 <span>Direct Savings</span>
                 <span>−₹{fmt(savings)}</span>
               </div>
             )}
             {couponDisc > 0 && (
-              <div className="chk-price-row green">
+              <div className="flex justify-between text-[0.9rem] py-1 text-[#10b981] font-semibold">
                 <span>Coupon Discount ({couponApplied})</span>
                 <span>−₹{fmt(couponDisc)}</span>
               </div>
             )}
             
             {/* COLLAPSIBLE BILL DETAILS */}
-            <div className={`chk-bill-details ${showBillDetails ? 'active' : ''}`}>
-              <div className="chk-bill-header" onClick={() => setShowBillDetails(!showBillDetails)}>
+            <div className={`my-3 overflow-hidden transition-all duration-300 rounded-xl border ${showBillDetails ? 'bg-white border-[#10b981] shadow-[0_4px_12px_rgba(16,185,129,0.08)]' : 'bg-slate-50 border-slate-200'}`}>
+              <div className="p-[14px_16px] flex justify-between items-center cursor-pointer text-[0.9rem] font-bold text-gray-900 select-none" onClick={() => setShowBillDetails(!showBillDetails)}>
                 <span>Taxes & Extra Charges</span>
-                <div className="chk-bill-summary-right">
+                <div className="flex items-center gap-2 text-[#10b981]">
                   <span>+₹{fmt(billTotal)}</span>
                   {showBillDetails ? <FiChevronUp size={14} /> : <FiChevronDown size={14} />}
                 </div>
               </div>
               
               {showBillDetails && (
-                <div className="chk-bill-body">
-                  <div className="chk-price-row small">
+                <div className="px-4 pb-4 flex flex-col gap-2 border-t border-slate-100 pt-3 animate-fade-in">
+                  <div className="flex justify-between text-[0.85rem] text-gray-500 py-0.5">
                     <span>Delivery Fee</span>
-                    <span>{delivery === 0 ? <span className="chk-free">FREE</span> : `₹${fmt(delivery)}`}</span>
+                    <span>{delivery === 0 ? <span className="text-[#10b981] font-bold">FREE</span> : `₹${fmt(delivery)}`}</span>
                   </div>
-                  <div className="chk-price-row small">
+                  <div className="flex justify-between text-[0.85rem] text-gray-500 py-0.5">
                     <span>GST (5%)</span>
                     <span>₹{fmt(gst)}</span>
                   </div>
-                  <div className="chk-price-row small">
+                  <div className="flex justify-between text-[0.85rem] text-gray-500 py-0.5">
                     <span>Platform Fee</span>
                     <span>₹{fmt(PLATFORM_FEE)}</span>
                   </div>
                   {codFee > 0 && (
-                    <div className="chk-price-row small">
+                    <div className="flex justify-between text-[0.85rem] text-gray-500 py-0.5">
                       <span>COD Handling Fee</span>
                       <span>₹{fmt(codFee)}</span>
                     </div>
@@ -228,23 +229,22 @@ const OrderSummary = ({ cartItems, couponCode, setCouponCode, couponApplied, set
               )}
             </div>
 
-            <div className="chk-price-divider" />
-            <div className="chk-price-row total">
+            <div className="flex justify-between font-extrabold text-[1.25rem] text-[#10b981] mt-[15px] pt-[15px] border-t-2 border-dashed border-gray-200">
               <span>Total Payable</span>
               <span>₹{fmt(total)}</span>
             </div>
             {(savings + couponDisc) > 0 && (
-              <div className="chk-savings-tag">
+              <div className="mt-4 bg-emerald-50 text-emerald-700 text-[0.85rem] font-bold p-3 rounded-xl text-center border border-dashed border-emerald-300">
                 🎉 You're saving ₹{fmt(savings + couponDisc)} on this order!
               </div>
             )}
           </div>
 
           {/* Trust */}
-          <div className="chk-trust-row">
-            <span><FiShield size={14} /> Secure Payment</span>
-            <span><FiTruck size={14} /> Fast Delivery</span>
-            <span><FiLock size={14} /> Safe & Private</span>
+          <div className="flex justify-between p-4 sm:p-6 text-[0.75rem] text-gray-500 font-semibold bg-gray-50">
+            <span className="flex items-center gap-1.5"><FiShield size={14} /> Secure Payment</span>
+            <span className="flex items-center gap-1.5"><FiTruck size={14} /> Fast Delivery</span>
+            <span className="flex items-center gap-1.5"><FiLock size={14} /> Safe & Private</span>
           </div>
         </>
       )}
@@ -287,7 +287,7 @@ const DeliveryStep = ({ data, setData, onNext }) => {
 
   const inp = (k, props = {}) => (
     <input
-      className={`chk-input ${errors[k] ? 'error' : ''}`}
+      className={`w-full border rounded-[10px] py-3 px-[14px] font-['Inter',sans-serif] text-[0.95rem] text-gray-900 outline-none transition-all duration-300 focus:border-[#10b981] focus:bg-white focus:shadow-[0_0_0_3px_rgba(85,183,70,0.15)] ${errors[k] ? 'border-red-500 bg-red-50' : 'bg-gray-50 border-gray-300'}`}
       value={data[k] || ''}
       onChange={e => set(k, e.target.value)}
       {...props}
@@ -295,9 +295,9 @@ const DeliveryStep = ({ data, setData, onNext }) => {
   );
 
   return (
-    <div className="chk-step-body">
+    <div className="flex flex-col gap-6">
       <Section title="Contact Information">
-        <div className="chk-grid-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Full Name *" error={errors.name}>
             {inp('name', { placeholder: 'Ramesh Kumar' })}
           </Field>
@@ -317,7 +317,7 @@ const DeliveryStep = ({ data, setData, onNext }) => {
         <Field label="Street / Area / Landmark *" error={errors.street}>
           {inp('street', { placeholder: 'Anna Nagar, Near Park' })}
         </Field>
-        <div className="chk-grid-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="City *" error={errors.city}>
             {inp('city', { placeholder: 'Chennai' })}
           </Field>
@@ -327,7 +327,7 @@ const DeliveryStep = ({ data, setData, onNext }) => {
         </div>
         <Field label="State *" error={errors.state}>
           <select
-            className={`chk-input ${errors.state ? 'error' : ''}`}
+            className={`w-full border rounded-[10px] py-3 px-[14px] font-['Inter',sans-serif] text-[0.95rem] text-gray-900 outline-none transition-all duration-300 focus:border-[#10b981] focus:bg-white focus:shadow-[0_0_0_3px_rgba(85,183,70,0.15)] ${errors.state ? 'border-red-500 bg-red-50' : 'bg-gray-50 border-gray-300'}`}
             value={data.state || ''}
             onChange={e => set('state', e.target.value)}
           >
@@ -337,7 +337,7 @@ const DeliveryStep = ({ data, setData, onNext }) => {
         </Field>
       </Section>
 
-      <button className="chk-next-btn" onClick={handleNext}>
+      <button className="w-full p-4 bg-[#10b981] border-none rounded-xl text-white text-base font-bold cursor-pointer shadow-[0_4px_12px_rgba(85,183,70,0.25)] transition-all duration-300 hover:bg-[#059669] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(85,183,70,0.3)]" onClick={handleNext}>
         Continue to Payment →
       </button>
     </div>
@@ -350,166 +350,44 @@ const DeliveryStep = ({ data, setData, onNext }) => {
 const PaymentStep = ({ onNext, onBack, method, setMethod, card, setCard, upi, setUpi, upiApp, setUpiApp, net, setNet }) => {
   const [errors, setErrors] = useState({});
 
-  const setC = (k, v) => {
-    setCard(d => ({ ...d, [k]: v }));
-    if (errors[k]) setErrors(e => ({ ...e, [k]: '' }));
-  };
-
-  const formatCardNum = v => v.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
-  const formatExpiry  = v => {
-    const d = v.replace(/\D/g, '').slice(0, 4);
-    return d.length >= 3 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
-  };
-
   const handleNext = () => {
     onNext();
   };
 
   const PayMethod = ({ id, icon, label }) => (
     <button
-      className={`chk-pay-method ${method === id ? 'active' : ''}`}
+      className={`flex flex-col items-center justify-center gap-3 py-6 px-4 bg-white border-2 rounded-[20px] cursor-pointer text-[0.9rem] font-extrabold transition-all duration-300 relative overflow-hidden group hover:-translate-y-[3px] ${method === id ? 'border-[#10b981] bg-emerald-50 text-green-800 shadow-[0_10px_25px_-5px_rgba(85,183,70,0.15)]' : 'border-slate-100 text-slate-500 hover:border-slate-200 hover:bg-slate-50'}`}
       onClick={() => { setMethod(id); setErrors({}); }}
     >
-      {icon}
+      <div className={`text-[1.8rem] mb-1 transition-all duration-300 ${method === id ? 'text-[#10b981] scale-110' : 'text-slate-400 group-hover:text-slate-500'}`}>
+        {icon}
+      </div>
       <span>{label}</span>
+      {method === id && (
+        <div className="absolute top-2.5 right-2.5 w-5 h-5 bg-[#10b981] text-white rounded-full flex items-center justify-center text-[0.7rem]">✓</div>
+      )}
     </button>
   );
 
   return (
-    <div className="chk-step-body">
+    <div className="flex flex-col gap-6">
       <Section title="Select Payment Method">
-        <div className="chk-pay-methods">
-          <PayMethod id="prepaid"    icon={<FiCreditCard size={18} />}  label="Secure Online Payment" />
-          <PayMethod id="cod"        icon={<FiTruck size={18} />}       label="Cash on Delivery" />
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-4 mb-6">
+          <PayMethod id="prepaid"    icon={<FiCreditCard />}  label="Secure Online Payment" />
+          <PayMethod id="cod"        icon={<FiTruck />}       label="Cash on Delivery" />
         </div>
       </Section>
 
-      {/* MANUAL PAYMENT FORMS (Commented for Backup) */}
-      {/* 
-      {method === 'card' && (
-        <Section title="Card Details">
-          <div className="chk-card-preview">
-            <div className="chk-card-chip" />
-            <p className="chk-card-num-preview">{card.number || '•••• •••• •••• ••••'}</p>
-            <div className="chk-card-bottom">
-              <span>{card.name || 'CARDHOLDER NAME'}</span>
-              <span>{card.expiry || 'MM/YY'}</span>
-            </div>
-          </div>
-          <Field label="Card Number *" error={errors.number}>
-            <input className={`chk-input ${errors.number ? 'error' : ''}`}
-              placeholder="1234 5678 9012 3456" maxLength={19}
-              value={card.number} onChange={e => setC('number', formatCardNum(e.target.value))} />
-          </Field>
-          <Field label="Cardholder Name *" error={errors.cardName}>
-            <input className={`chk-input ${errors.cardName ? 'error' : ''}`}
-              placeholder="As on card" value={card.name}
-              onChange={e => setC('name', e.target.value.toUpperCase())} />
-          </Field>
-          <div className="chk-grid-2">
-            <Field label="Expiry Date *" error={errors.expiry}>
-              <input className={`chk-input ${errors.expiry ? 'error' : ''}`}
-                placeholder="MM/YY" maxLength={5}
-                value={card.expiry} onChange={e => setC('expiry', formatExpiry(e.target.value))} />
-            </Field>
-            <Field label="CVV *" error={errors.cvv}>
-              <input className={`chk-input ${errors.cvv ? 'error' : ''}`}
-                placeholder="•••" maxLength={4} type="password"
-                value={card.cvv} onChange={e => setC('cvv', e.target.value.replace(/\D/g, ''))} />
-            </Field>
-          </div>
-          <div className="chk-card-types">
-            <span className="chk-card-type visa">VISA</span>
-            <span className="chk-card-type mc">MC</span>
-            <span className="chk-card-type rupay">RuPay</span>
-            <span className="chk-card-type amex">AMEX</span>
-          </div>
-        </Section>
-      )}
-
-      {method === 'upi' && (
-        <Section title="UPI Payment">
-          <div className="chk-upi-apps">
-            {[
-              { id: 'GPay', logo: 'https://cdn.iconscout.com/icon/free/png-256/google-pay-2038779-1721670.png' },
-              { id: 'PhonePe', logo: 'https://e7.pngegg.com/pngimages/332/615/png-clipart-phonepe-india-unified-payments-interface-india-purple-violet.png' },
-              { id: 'Paytm', logo: 'https://cdn.iconscout.com/icon/free/png-256/paytm-226448.png' },
-              { id: 'BHIM', logo: 'https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/bhim-upi-icon.png' }
-            ].map(app => (
-              <button key={app.id} className={`chk-upi-app-btn ${upiApp === app.id ? 'active' : ''}`}
-                onClick={() => { setUpiApp(app.id); setErrors(e => ({ ...e, upiApp: '' })); }}>
-                <img src={app.logo} alt={app.id} style={{ height: '32px', objectFit: 'contain', marginBottom: '4px' }} />
-                <span>{app.id}</span>
-              </button>
-            ))}
-          </div>
-          <Field label="UPI ID *" error={errors.upi}>
-            <input className={`chk-input ${errors.upi ? 'error' : ''}`}
-              placeholder="yourname@upi" value={upi}
-              onChange={e => { setUpi(e.target.value); if (errors.upi) setErrors(er => ({ ...er, upi: '' })); }} />
-          </Field>
-          <p className="chk-upi-note">Enter your UPI ID and a payment request will be sent to your UPI app</p>
-        </Section>
-      )}
-
-      {method === 'netbanking' && (
-        <Section title="Select Your Bank">
-          <div className="chk-bank-grid">
-            {[
-              { id: 'State Bank of India', logo: 'https://1000logos.net/wp-content/uploads/2018/03/SBI-Logo.png' },
-              { id: 'HDFC Bank', logo: 'https://1000logos.net/wp-content/uploads/2021/06/HDFC-Bank-logo.png' },
-              { id: 'ICICI Bank', logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT3Yfl3u_FGS0L-sfnzW1kBeUqtwZnmAoztlg&s' },
-              { id: 'Axis Bank', logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS0t8puDMM1wnf7zYIbaG_DkKAhyDSLIh17UQ&s' },
-              { id: 'Kotak Mahindra Bank', logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS2PNtBWtngsAJBiNuJ4Jzg5cC_LM3RRATuNQ&s' },
-              { id: 'Bank of Baroda', logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQBiBkDnKwaGRjh6dTFoCnMY_jwXWjqRAthtg&s' },
-              { id: 'Punjab National Bank', logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSOI4FaM2MMnDk1UbN0fsacHcypzTZHL69ftQ&s' },
-              { id: 'Canara Bank', logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTUqCFKNrB9QcT5gRTxDO0P1F2WuT9OlF9oIw&s' }
-            ].map(b => (
-              <button key={b.id} className={`chk-bank-btn ${net === b.id ? 'active' : ''}`}
-                onClick={() => { setNet(b.id); setErrors(e => ({ ...e, net: '' })); }}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                <img src={b.logo} alt={b.id} style={{ height: '30px', objectFit: 'contain' }} />
-                <span style={{ fontSize: '0.75rem', textAlign: 'center' }}>{b.id}</span>
-              </button>
-            ))}
-          </div>
-          {errors.net && <p className="chk-error" style={{marginTop:'8px'}}><FiAlertCircle size={12} /> {errors.net}</p>}
-        </Section>
-      )}
-
-      {method === 'wallet' && (
-        <Section title="Select Wallet">
-          <div className="chk-bank-grid">
-            {[
-              { id: 'Paytm Wallet', logo: 'https://cdn.iconscout.com/icon/free/png-256/paytm-226448.png' },
-              { id: 'Amazon Pay', logo: 'https://www.vectorlogo.zone/logos/amazon/amazon-icon.svg' },
-              { id: 'Mobikwik', logo: 'https://download.logo.wine/logo/MobiKwik/MobiKwik-Logo.wine.png' },
-              { id: 'Freecharge', logo: 'https://upload.wikimedia.org/wikipedia/commons/9/90/FreeCharge_Logo.png' },
-              { id: 'Airtel Money', logo: 'https://www.vhv.rs/dpng/d/422-4221364_send-cash-to-ghana-airtel-logo-new-hd.png' },
-              { id: 'JioMoney', logo: 'https://www.drupal.org/files/project-images/logo_138.png' }
-            ].map(w => (
-              <button key={w.id} className={`chk-bank-btn ${net === w.id ? 'active' : ''}`}
-                onClick={() => setNet(w.id)}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                <img src={w.logo} alt={w.id} style={{ height: '32px', objectFit: 'contain' }} />
-                <span style={{ fontSize: '0.75rem', textAlign: 'center' }}>{w.id}</span>
-              </button>
-            ))}
-          </div>
-        </Section>
-      )}
-      */}
-
       {method === 'prepaid' && (
         <Section title="Secure Online Payment">
-          <div className="chk-cod-info">
+          <div className="bg-emerald-50 rounded-2xl p-6 border border-emerald-200 leading-[1.6] text-base text-green-800 flex flex-col gap-3 items-start">
              <p>🚀 Fast, Secure & Reliable.</p>
              <p>Pay via UPI, Cards, NetBanking or Wallets on the next page.</p>
-             <div className="chk-card-types" style={{marginTop: '12px'}}>
-                <span className="chk-card-type visa">UPI</span>
-                <span className="chk-card-type mc">CARDS</span>
-                <span className="chk-card-type rupay">BANKS</span>
-                <span className="chk-card-type amex">WALLETS</span>
+             <div className="flex gap-2 text-[0.75rem] font-bold mt-2 text-gray-500">
+                <span className="px-2 py-1 bg-white border border-gray-200 rounded">UPI</span>
+                <span className="px-2 py-1 bg-white border border-gray-200 rounded">CARDS</span>
+                <span className="px-2 py-1 bg-white border border-gray-200 rounded">BANKS</span>
+                <span className="px-2 py-1 bg-white border border-gray-200 rounded">WALLETS</span>
              </div>
           </div>
         </Section>
@@ -518,16 +396,16 @@ const PaymentStep = ({ onNext, onBack, method, setMethod, card, setCard, upi, se
       {/* COD */}
       {method === 'cod' && (
         <Section title="Cash on Delivery">
-          <div className="chk-cod-info">
+          <div className="bg-emerald-50 rounded-2xl p-6 border border-emerald-200 leading-[1.6] text-base text-green-800 flex flex-col gap-3 items-start">
             <p>💰 Pay in cash when your order arrives at your doorstep.</p>
             <p>Note: COD is available for orders up to ₹5,000.</p>
           </div>
         </Section>
       )}
 
-      <div className="chk-btn-row">
-        <button className="chk-back-btn" onClick={onBack}>← Back</button>
-        <button className="chk-next-btn" onClick={handleNext}>Review Order →</button>
+      <div className="flex gap-4 items-center">
+        <button className="py-[15px] px-6 bg-white border border-gray-300 rounded-xl text-gray-500 text-[0.95rem] font-semibold cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50" onClick={onBack}>← Back</button>
+        <button className="flex-1 p-4 bg-gradient-to-br from-[#10b981] to-[#059669] border-none rounded-xl text-white text-base font-bold cursor-pointer flex items-center justify-center gap-2.5 shadow-[0_4px_16px_rgba(16,185,129,0.3)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(16,185,129,0.4)] disabled:opacity-50" onClick={handleNext}>Review Order →</button>
       </div>
     </div>
   );
@@ -551,20 +429,20 @@ const ConfirmStep = ({ delivery, cartItems, couponApplied, onBack, onPlace, isPr
   const total = subtotal + billTotal - couponDisc;
 
   return (
-    <div className="chk-step-body">
+    <div className="flex flex-col gap-6">
       <Section title="Delivery Address">
-        <div className="chk-confirm-box">
-          <p className="chk-confirm-name">{delivery.name}</p>
+        <div className="bg-gray-50 rounded-xl p-5 text-[0.95rem] leading-[1.6] text-gray-900 border border-gray-200">
+          <p className="font-bold text-[1.05rem] text-[#10b981] mb-2">{delivery.name}</p>
           <p>{delivery.door}, {delivery.street}</p>
           <p>{delivery.city} — {delivery.pincode}</p>
           <p>{delivery.state}</p>
-          <p>📱 {delivery.phone} &nbsp;|&nbsp; ✉️ {delivery.email}</p>
+          <p className="mt-2">📱 {delivery.phone} &nbsp;|&nbsp; ✉️ {delivery.email}</p>
         </div>
       </Section>
 
       <Section title="Order Items">
         {cartItems.map(item => (
-          <div key={item.uniqueId} className="chk-confirm-item">
+          <div key={item.uniqueId} className="flex justify-between text-[0.9rem] py-2.5 border-b border-gray-200 font-medium last:border-none">
             <span>{item.name} ({item.unit}) × {item.quantity || 1}</span>
             <span>₹{fmt(item.price * (item.quantity || 1))}</span>
           </div>
@@ -572,22 +450,21 @@ const ConfirmStep = ({ delivery, cartItems, couponApplied, onBack, onPlace, isPr
       </Section>
 
       <Section title="Price Breakdown">
-        <div className="chk-confirm-box">
-          <div className="chk-confirm-row"><span>Subtotal</span><span>₹{fmt(subtotal)}</span></div>
-          {savings > 0 && <div className="chk-confirm-row green"><span>Product Discount</span><span>−₹{fmt(savings)}</span></div>}
-          {couponDisc > 0 && <div className="chk-confirm-row green"><span>Coupon ({couponApplied})</span><span>−₹{fmt(couponDisc)}</span></div>}
-          <div className="chk-confirm-row"><span>Delivery</span><span>{deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}</span></div>
-          <div className="chk-confirm-row"><span>GST (5%)</span><span>+₹{fmt(gst)}</span></div>
-          <div className="chk-confirm-row"><span>Platform Fee</span><span>+₹{fmt(PLATFORM_FEE)}</span></div>
-          {codFee > 0 && <div className="chk-confirm-row"><span>COD Fee</span><span>+₹{fmt(codFee)}</span></div>}
-          <div className="chk-confirm-divider" />
-          <div className="chk-confirm-row total"><span>Total Payable</span><span>₹{fmt(total)}</span></div>
+        <div className="bg-gray-50 rounded-xl p-5 text-[0.95rem] leading-[1.6] text-gray-900 border border-gray-200">
+          <div className="flex justify-between text-[0.9rem] py-1.5 text-gray-500"><span>Subtotal</span><span>₹{fmt(subtotal)}</span></div>
+          {savings > 0 && <div className="flex justify-between text-[0.9rem] py-1.5 text-[#10b981] font-semibold"><span>Product Discount</span><span>−₹{fmt(savings)}</span></div>}
+          {couponDisc > 0 && <div className="flex justify-between text-[0.9rem] py-1.5 text-[#10b981] font-semibold"><span>Coupon ({couponApplied})</span><span>−₹{fmt(couponDisc)}</span></div>}
+          <div className="flex justify-between text-[0.9rem] py-1.5 text-gray-500"><span>Delivery</span><span>{deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}</span></div>
+          <div className="flex justify-between text-[0.9rem] py-1.5 text-gray-500"><span>GST (5%)</span><span>+₹{fmt(gst)}</span></div>
+          <div className="flex justify-between text-[0.9rem] py-1.5 text-gray-500"><span>Platform Fee</span><span>+₹{fmt(PLATFORM_FEE)}</span></div>
+          {codFee > 0 && <div className="flex justify-between text-[0.9rem] py-1.5 text-gray-500"><span>COD Fee</span><span>+₹{fmt(codFee)}</span></div>}
+          <div className="flex justify-between font-extrabold text-[1.15rem] text-gray-900 mt-2.5 pt-2.5 border-t-2 border-dashed border-gray-200"><span>Total Payable</span><span>₹{fmt(total)}</span></div>
         </div>
       </Section>
 
-      <div className="chk-btn-row">
-        <button className="chk-back-btn" onClick={onBack} disabled={isProcessing}>← Back</button>
-        <button className="chk-place-btn" onClick={onPlace} disabled={isProcessing}>
+      <div className="flex gap-4 items-center">
+        <button className="py-[15px] px-6 bg-white border border-gray-300 rounded-xl text-gray-500 text-[0.95rem] font-semibold cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50" onClick={onBack} disabled={isProcessing}>← Back</button>
+        <button className="flex-1 p-4 bg-gradient-to-br from-[#10b981] to-[#059669] border-none rounded-xl text-white text-base font-bold cursor-pointer flex items-center justify-center gap-2.5 shadow-[0_4px_16px_rgba(16,185,129,0.3)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(16,185,129,0.4)] disabled:opacity-50" onClick={onPlace} disabled={isProcessing}>
           <FiLock size={16} /> {isProcessing ? 'Processing Order...' : `Place Order · ₹${fmt(total)}`}
         </button>
       </div>
@@ -601,14 +478,14 @@ const ConfirmStep = ({ delivery, cartItems, couponApplied, onBack, onPlace, isPr
 const OrderSuccess = ({ orderId, name }) => {
   const navigate = useNavigate();
   return (
-    <div className="chk-success">
-      <div className="chk-success-icon">🎉</div>
-      <h2>Order Placed Successfully!</h2>
-      <p className="chk-success-sub">Thank you, <strong>{name}</strong>! Your order has been confirmed.</p>
-      <div className="chk-order-id">Order ID: <strong>{orderId}</strong></div>
-      <p className="chk-success-note">You will receive a confirmation email shortly.</p>
-      <div className="chk-success-btns">
-        <button className="chk-next-btn" onClick={() => navigate('/')}>Continue Shopping</button>
+    <div className="max-w-[540px] mx-auto my-[80px] text-center bg-white rounded-[24px] p-[40px_24px] md:p-[56px_48px] shadow-lg border border-gray-200">
+      <div className="text-[4rem] mb-6">🎉</div>
+      <h2 className="text-[1.8rem] text-[#10b981] font-extrabold m-0 mb-3">Order Placed Successfully!</h2>
+      <p className="text-[1rem] text-gray-500 m-0 mb-6">Thank you, <strong>{name}</strong>! Your order has been confirmed.</p>
+      <div className="bg-gray-50 border border-dashed border-gray-300 rounded-[10px] p-[12px_24px] text-[1rem] text-gray-900 mx-auto mb-5 inline-block">Order ID: <strong>{orderId}</strong></div>
+      <p className="text-[0.85rem] text-gray-500 mb-8">You will receive a confirmation email shortly.</p>
+      <div className="flex justify-center">
+        <button className="w-full sm:w-auto p-4 px-8 bg-[#10b981] border-none rounded-xl text-white text-base font-bold cursor-pointer shadow-[0_4px_12px_rgba(85,183,70,0.25)] transition-all duration-300 hover:bg-[#059669] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(85,183,70,0.3)]" onClick={() => navigate('/')}>Continue Shopping</button>
       </div>
     </div>
   );
@@ -677,7 +554,7 @@ const CheckoutPage = () => {
         if (c.type === 'percent') couponDisc = subtotal * c.value / 100;
         else if (c.type === 'flat') couponDisc = (couponApplied === 'SAVE100' && subtotal < 999) ? 0 : c.value;
       }
-      const totalPayable = subtotal + delivery_fee + gst + PLATFORM_FEE - couponDisc;
+      const totalPayable = subtotal + delivery_fee + gst + PLATFORM_FEE + (method === 'cod' ? COD_CHARGE : 0) - couponDisc;
 
       const options = {
         key: process.env.REACT_APP_RAZORPAY_KEY_ID || "rzp_test_placeholder", 
@@ -740,7 +617,14 @@ const CheckoutPage = () => {
     const deliveryFee = subtotal >= 499 ? 0 : 40;
     const gstRate = 0.05;
     const gst = subtotal * gstRate;
-    const total = subtotal + deliveryFee + gst + 5.00; // Manual calc for email total to match UI logic (5 platform fee)
+    let couponDisc = 0;
+    if (couponApplied && COUPONS[couponApplied]) {
+      const c = COUPONS[couponApplied];
+      if (c.type === 'percent') couponDisc = subtotal * c.value / 100;
+      else if (c.type === 'flat') couponDisc = (couponApplied === 'SAVE100' && subtotal < 999) ? 0 : c.value;
+    }
+    const codFee = method === 'cod' ? COD_CHARGE : 0;
+    const total = subtotal + deliveryFee + gst + PLATFORM_FEE + codFee - couponDisc;
 
     const templateParams = {
       to_name: delivery.name || 'Customer',
@@ -799,24 +683,24 @@ const CheckoutPage = () => {
 
   if (placed) {
     return (
-      <div className="chk-page">
+      <div className="min-h-screen bg-gray-50 font-['Inter',sans-serif] text-gray-900 pb-[80px]">
         <OrderSuccess orderId={orderId} name={delivery.name || 'Devotee'} />
       </div>
     );
   }
 
   return (
-    <div className="chk-page">
-      <div className="chk-top-bar">
-        <div className="chk-brand">🛒 FreshBasket — Secure Checkout</div>
-        <div className="chk-secure"><FiLock size={14} /> SSL Secured</div>
+    <div className="min-h-screen bg-gray-50 font-['Inter',sans-serif] text-gray-900 pb-[80px]">
+      <div className="flex items-center justify-between bg-white px-8 py-4 border-b border-gray-200 text-base font-bold text-[#10b981] shadow-sm">
+        <div className="flex items-center gap-2">🛒 FreshBasket — Secure Checkout</div>
+        <div className="flex items-center gap-2 text-[0.85rem] text-gray-500 font-medium"><FiLock size={14} /> SSL Secured</div>
       </div>
 
       <StepBar step={step} />
 
-      <div className="chk-layout">
+      <div className="flex flex-col-reverse lg:grid lg:grid-cols-[1fr_420px] gap-8 max-w-[1200px] mx-auto mt-8 px-6">
         {/* LEFT — form steps */}
-        <div className="chk-left">
+        <div className="flex flex-col gap-6">
           {step === 1 && (
             <DeliveryStep
               data={delivery}
@@ -849,7 +733,7 @@ const CheckoutPage = () => {
         </div>
 
         {/* RIGHT — order summary */}
-        <div className="chk-right">
+        <div className="w-full">
           <OrderSummary
             cartItems={cartItems}
             couponCode={couponCode}

@@ -4,7 +4,6 @@ import { FiHeart, FiStar, FiShoppingCart, FiMinus, FiPlus } from 'react-icons/fi
 import { useCart } from '../../../contexts/CartContext';
 import { useWishlist } from '../../../contexts/WishlistContext';
 import CustomSelect from '../../../components/common/CustomSelect';
-import '../../../styles/components/ProductCard.css';
 
 const categoryColors = {
   'Fresh Vegetables': '#10b981',
@@ -82,19 +81,20 @@ const ProductCard = ({ product, cardType = 'shop' }) => {
 
   const isWished = isInWishlist(product.id);
 
-  const cardClass = cardType === 'home' ? 'product-card' : 'shop-card';
-  const imgClass = cardType === 'home' ? 'product-image-container' : 'shop-image-container';
-  const contentClass = cardType === 'home' ? 'product-content' : 'shop-content';
-
   return (
-    <div className={cardClass} style={{ '--category-color': categoryColors[product.category] || '#55b746' }}>
-      <div className="card-top-accent"></div>
+    <div 
+      className="bg-white rounded-2xl p-4 relative transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] shadow-sm flex flex-col border border-transparent hover:shadow-[0_15px_35px_rgba(5,150,105,0.15)] hover:-translate-y-2 hover:border-[rgba(5,150,105,0.3)] group/card" 
+      style={{ '--category-color': categoryColors[product.category] || '#55b746' }}
+    >
+      <div className="absolute top-0 left-0 right-0 h-[5px] rounded-t-xl opacity-80 z-[5]" style={{ backgroundColor: 'var(--category-color)' }}></div>
+      
       {dynamicDiscount > 0 && (
-        <div className="discount-badge">{dynamicDiscount}% OFF</div>
+        <div className="absolute top-4 left-4 bg-[#ff5252] text-white px-3 py-1 rounded text-xs font-bold z-[2] shadow-sm">{dynamicDiscount}% OFF</div>
       )}
-      <div className={`${cardType}-actions-hover product-actions-hover`}>
+      
+      <div className="absolute top-4 right-4 z-[2] opacity-0 translate-x-2.5 transition-all duration-300 group-hover/card:opacity-100 group-hover/card:translate-x-0">
         <button 
-          className="icon-btn heart-btn" 
+          className="bg-white border border-gray-200 w-9 h-9 rounded-full flex items-center justify-center cursor-pointer text-gray-500 transition-colors shadow-sm hover:text-[#ff5252] hover:border-[#ff5252]" 
           title={isWished ? "Remove from wishlist" : "Add to wishlist"} 
           onClick={handleWishlistToggle}
         >
@@ -102,39 +102,40 @@ const ProductCard = ({ product, cardType = 'shop' }) => {
         </button>
       </div>
       
-      <Link to={`/product/${product.id}`} className="card-link-wrapper">
-        <div className={imgClass}>
-          <img src={product.image} alt={product.name} loading="lazy" />
+      <Link to={`/product/${product.id}`} className="no-underline text-inherit flex-1 flex flex-col">
+        <div className="w-full h-[140px] sm:h-[180px] md:h-[200px] rounded-lg overflow-hidden mb-6">
+          <img src={product.image} alt={product.name} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105" />
         </div>
-        <div className={`${contentClass} core-info`}>
-          <div className="product-meta-row">
+        <div className="flex flex-col flex-none pb-0">
+          <div className="flex justify-between items-center mb-2.5">
             <span 
-              className={`${cardType}-category product-category-tag`} 
+              className="text-[0.72rem] font-extrabold px-2.5 py-1 rounded-md uppercase tracking-[0.5px]" 
               style={{ color: 'var(--category-color)', background: 'color-mix(in srgb, var(--category-color) 12%, transparent)' }}
             >
               {product.category}
             </span>
-            {dynamicRating >= 4.7 && <span className="hot-deal-badge">🔥 Hot</span>}
+            {dynamicRating >= 4.7 && <span className="bg-red-50 text-red-500 text-[0.7rem] font-extrabold px-2 py-1 rounded uppercase border border-red-100">🔥 Hot</span>}
           </div>
-          <h3 className={`${cardType}-name product-name`}>{product.name}</h3>
-          <div className={`${cardType}-rating product-rating`}>
-            <div className="stars-small">
-              <FiStar className="star-icon filled" />
+          <h3 className="text-[1.15rem] font-semibold text-gray-900 mb-3 leading-[1.4] flex-1">{product.name}</h3>
+          
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1.5 font-bold text-[0.9rem] text-gray-900">
+              <FiStar className="text-[#fbbf24] fill-[#fbbf24]" />
               <span>{dynamicRating}</span>
-              <span style={{ fontSize: '0.85em', marginLeft: '2px', color: 'var(--text-secondary)' }}>({allReviews.length})</span>
+              <span className="text-[0.85em] ml-0.5 text-gray-500">({allReviews.length})</span>
             </div>
-            <span className="orders-mini">
+            <span className="text-[0.75rem] text-gray-500 font-medium bg-gray-50 px-2 py-1 rounded">
               📦 {Math.abs((typeof product.id === 'number' ? product.id * 3 : String(product.id).length * 7) % 100) + 40}+
             </span>
           </div>
         </div>
       </Link>
 
-      <div className={`${contentClass} interactive-footer`}>
+      <div className="flex-none flex flex-col gap-3 pt-2">
         
         {/* Modern Variant Selector */}
         {hasVariants && (
-          <div className="variant-selector-wrapper" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full" onClick={(e) => e.stopPropagation()}>
             <CustomSelect 
               value={selectedVariantIdx}
               onChange={handleVariantChange}
@@ -147,42 +148,42 @@ const ProductCard = ({ product, cardType = 'shop' }) => {
                 const isDiscounted = disc > 0;
                 const vSellPrice = isLegacyDiscount ? vPrice * (1 - disc / 100) : vPrice;
                 const priceLabel = isDiscounted 
-                  ? <><span className="original-price strike-out">₹{(vMrp || vPrice).toFixed(0)}</span> <span className="deal-price">₹{vSellPrice.toFixed(2)}</span></>
+                  ? <><span className="line-through text-gray-400 text-[0.85rem] font-medium tracking-tight">₹{(vMrp || vPrice).toFixed(0)}</span> <span className="text-[#059669] text-[0.95rem] font-bold">₹{vSellPrice.toFixed(2)}</span></>
                   : `₹${vPrice.toFixed(2)}`;
                 return {
                   value: idx,
-                  label: <span style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}>{v.unit} - {priceLabel}</span>
+                  label: <span className="flex items-center gap-2">{v.unit} - {priceLabel}</span>
                 };
               })}
             />
           </div>
         )}
 
-        <div className={`${cardType}-footer product-footer`}>
-          <div className="price-container">
+        <div className="flex justify-between items-center border-t border-dashed border-gray-200 pt-4 mt-1">
+          <div className="flex flex-col">
             {dynamicDiscount > 0 ? (
-              <div className="deal-price-wrapper">
-                 <span className={`${cardType}-price original-price strike-out`}>
+              <div className="flex flex-row items-baseline gap-2">
+                 <span className="line-through text-gray-400 text-[0.85rem] font-medium">
                     ₹{currentMrp.toFixed(0)}
                  </span>
-                 <span className={`${cardType}-price deal-price product-price`}>
+                 <span className="text-[#059669] text-[1.1rem] font-extrabold">
                     ₹{(Number(product.discount) > 0 && currentMrp === currentPrice ? currentPrice * (1 - Number(product.discount) / 100) : currentPrice).toFixed(2)}
                  </span>
               </div>
             ) : (
-                 <span className={`${cardType}-price product-price`}>₹{currentPrice.toFixed(2)}</span>
+                 <span className="text-[#059669] text-[1.1rem] font-extrabold">₹{currentPrice.toFixed(2)}</span>
             )}
-            {!hasVariants && <span className={`${cardType}-unit product-unit`}>/ {product.unit || '1 pc'}</span>}
+            {!hasVariants && <span className="text-[0.8rem] text-gray-500">/ {product.unit || '1 pc'}</span>}
           </div>
           
           {qtyInCart > 0 ? (
-            <div className="card-qty-controls" onClick={(e) => e.stopPropagation()}>
-              <button className="qty-btn dec-btn" onClick={decrementQty}><FiMinus /></button>
-              <span className="qty-val">{qtyInCart}</span>
-              <button className="qty-btn inc-btn" onClick={incrementQty}><FiPlus /></button>
+            <div className="flex items-center justify-between bg-[#059669] rounded-xl overflow-hidden h-[40px] w-[110px] shadow-[0_4px_10px_rgba(16,185,129,0.2)]" onClick={(e) => e.stopPropagation()}>
+              <button className="bg-transparent border-none w-[35px] h-full flex items-center justify-center cursor-pointer text-white text-[1.1rem] transition-colors hover:bg-black/10" onClick={decrementQty}><FiMinus /></button>
+              <span className="font-extrabold text-white text-[1rem]">{qtyInCart}</span>
+              <button className="bg-transparent border-none w-[35px] h-full flex items-center justify-center cursor-pointer text-white text-[1.1rem] transition-colors hover:bg-black/10" onClick={incrementQty}><FiPlus /></button>
             </div>
           ) : (
-            <button className="add-to-cart-btn btn" onClick={handleAdd}>
+            <button className="bg-white text-[#059669] border-2 border-[#059669] px-5 py-2 font-bold rounded-lg transition-all hover:bg-[#059669] hover:text-white group-hover/card:bg-[#059669] group-hover/card:text-white sm:group-hover/card:scale-105 group-hover/card:shadow-[0_5px_15px_rgba(5,150,105,0.2)]" onClick={handleAdd}>
                Add
             </button>
           )}
