@@ -139,6 +139,11 @@ const Navbar = () => {
                   {currentUser.email}
                 </li>
                 <li>
+                  <Link to="/profile" style={{ display: 'block', textDecoration: 'none', padding: '0.8rem 1rem', color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 600 }}>
+                    My Profile
+                  </Link>
+                </li>
+                <li>
                   <button onClick={() => { logoutUser(); navigate('/'); }} style={{ width: '100%', background: 'none', border: 'none', padding: '0.8rem 1rem', textAlign: 'left', cursor: 'pointer', color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 600 }}>
                     Logout
                   </button>

@@ -645,6 +645,13 @@ const CheckoutPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
 
+  // Auto scroll to top when order is placed
+  useEffect(() => {
+    if (placed) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [placed]);
+
   const [isProcessing, setIsProcessing] = useState(false);
   const deliveryInfo = delivery; // Capture current delivery state
 
@@ -748,6 +755,25 @@ const CheckoutPage = () => {
       total: `₹${total.toLocaleString('en-IN')}`,
       delivery_address: delivery.street || '(No address provided)'
     };
+
+    // Save order to database
+    fetch('http://localhost:5000/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        customer_name: delivery.name,
+        customer_email: delivery.email,
+        customer_phone: delivery.phone,
+        items: cartItems,
+        total_amount: total,
+        payment_method: method === 'cod' ? 'COD' : 'Online',
+        shipping_address: `${delivery.door}, ${delivery.street}, ${delivery.city}, ${delivery.state} - ${delivery.pincode}`
+      })
+    })
+    .then(res => res.json())
+    .then(data => console.log('Order saved to DB:', data))
+    .catch(err => console.error('Error saving order:', err));
 
     if (delivery.email) {
       emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams, PUBLIC_KEY)

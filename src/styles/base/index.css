@@ -98,7 +98,7 @@
 
 body {
   font-family: 'Inter', sans-serif;
-  background-color: var(--background-color);
+  background-color: #f8fafc; /* Slick light grey for modern dashboard feel */
   color: var(--text-primary);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;

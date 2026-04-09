@@ -3,9 +3,12 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 const ThemeContext = createContext({ theme: "light", setTheme: () => null });
 
 export function ThemeProvider({ children, defaultTheme = "light" }) {
-  const [theme, setTheme] = useState(defaultTheme);
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("theme") || defaultTheme;
+  });
 
   useEffect(() => {
+    localStorage.setItem("theme", theme);
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
     if (theme === "system") {

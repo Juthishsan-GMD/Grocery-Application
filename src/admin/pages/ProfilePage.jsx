@@ -2,28 +2,37 @@ import { useState, useEffect } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Mail, Phone, MapPin, Edit, Camera } from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
+import { useCart } from "../../contexts/CartContext";
 
 export default function ProfilePage() {
+  const { currentUser, loginUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
   const [formData, setFormData] = useState({
-    fullName: "Admin Director",
-    email: "admin@freshbasket.com",
-    phone: "+91 98765-43210",
-    role: "Super Admin",
-    address: "Tower A, Business Park, Andheri East, Mumbai 400069",
+    name: currentUser?.name || "",
+    email: currentUser?.email || "",
+    phone: currentUser?.phone || "",
+    role: currentUser?.role || "Admin",
+    address: currentUser?.address || "",
   });
 
   const [originalData, setOriginalData] = useState(formData);
 
   useEffect(() => {
-    // Load profile from localStorage on mount
-    const savedProfile = localStorage.getItem("adminProfile");
-    if (savedProfile) {
-      const parsed = JSON.parse(savedProfile);
-      setFormData(parsed);
-      setOriginalData(parsed);
+    if (currentUser) {
+      const data = {
+        name: currentUser.name || "",
+        email: currentUser.email || "",
+        phone: currentUser.phone || "",
+        role: currentUser.role || "Admin",
+        address: currentUser.address || "",
+      };
+      setFormData(data);
+      setOriginalData(data);
     }
-  }, []);
+  }, [currentUser]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -35,11 +44,28 @@ export default function ProfilePage() {
     setOriginalData(formData);
   };
 
-  const handleSaveChanges = () => {
-    // Save to localStorage
-    localStorage.setItem("adminProfile", JSON.stringify(formData));
-    alert("Profile updated successfully!");
-    setIsEditing(false);
+  const handleSaveChanges = async () => {
+    setLoading(true);
+    try {
+      const resp = await fetch(`http://localhost:5000/api/auth/profile/${currentUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, role: 'admin' })
+      });
+      const data = await resp.json();
+      if (resp.ok) {
+        loginUser(data.user);
+        alert("Profile updated successfully!");
+        setIsEditing(false);
+      } else {
+        alert(data.message || "Failed to update profile");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Server error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -56,17 +82,19 @@ export default function ProfilePage() {
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="rounded-xl border bg-card p-6 shadow-sm text-center">
           <div className="relative mx-auto mb-4 h-20 w-20">
-            <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xl font-bold">AD</div>
+            <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xl font-bold">
+              {(currentUser?.name || "A").split(" ").map(n => n[0]).join("").toUpperCase()}
+            </div>
             <button className="absolute bottom-0 right-0 rounded-full bg-card border p-1.5 shadow-sm hover:bg-secondary transition-colors">
               <Camera className="h-3 w-3 text-muted-foreground" />
             </button>
           </div>
-          <h3 className="text-base font-semibold text-card-foreground">Admin Director</h3>
-          <p className="text-xs text-muted-foreground">Super Admin · FreshBasket</p>
+          <h3 className="text-base font-semibold text-card-foreground">{formData.name}</h3>
+          <p className="text-xs text-muted-foreground">{formData.role} · FreshBasket</p>
           <div className="mt-4 space-y-2 text-xs text-muted-foreground">
             <div className="flex items-center justify-center gap-2"><Mail className="h-3.5 w-3.5" />{formData.email}</div>
             <div className="flex items-center justify-center gap-2"><Phone className="h-3.5 w-3.5" />{formData.phone}</div>
-            <div className="flex items-center justify-center gap-2"><MapPin className="h-3.5 w-3.5" />Mumbai, Maharashtra</div>
+            <div className="flex items-center justify-center gap-2"><MapPin className="h-3.5 w-3.5" />{formData.address || "Location not set"}</div>
           </div>
           <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-2 text-center">
             <div><p className="text-lg font-bold text-card-foreground">342</p><p className="text-[10px] text-muted-foreground">Sellers</p></div>
@@ -81,16 +109,16 @@ export default function ProfilePage() {
             ) : null}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div><label className="text-xs font-medium text-card-foreground block mb-1">Full Name</label><Input name="fullName" value={formData.fullName} onChange={handleChange} disabled={!isEditing} className={!isEditing ? "bg-secondary border-none text-sm" : "text-sm"} /></div>
-            <div><label className="text-xs font-medium text-card-foreground block mb-1">Email</label><Input name="email" value={formData.email} onChange={handleChange} disabled={!isEditing} className={!isEditing ? "bg-secondary border-none text-sm" : "text-sm"} /></div>
-            <div><label className="text-xs font-medium text-card-foreground block mb-1">Phone</label><Input name="phone" value={formData.phone} onChange={handleChange} disabled={!isEditing} className={!isEditing ? "bg-secondary border-none text-sm" : "text-sm"} /></div>
-            <div><label className="text-xs font-medium text-card-foreground block mb-1">Role</label><Input name="role" value={formData.role} disabled className="bg-secondary border-none text-sm" /></div>
-            <div className="sm:col-span-2"><label className="text-xs font-medium text-card-foreground block mb-1">Company Address</label><Input name="address" value={formData.address} onChange={handleChange} disabled={!isEditing} className={!isEditing ? "bg-secondary border-none text-sm" : "text-sm"} /></div>
+            <div><label className="text-xs font-medium text-card-foreground block mb-1">Full Name</label><Input name="name" value={formData.name} onChange={handleChange} disabled={!isEditing} className={!isEditing ? "bg-muted/30 text-card-foreground opacity-100 text-sm" : "text-sm"} /></div>
+            <div><label className="text-xs font-medium text-card-foreground block mb-1">Email</label><Input name="email" value={formData.email} onChange={handleChange} disabled={!isEditing} className={!isEditing ? "bg-muted/30 text-card-foreground opacity-100 text-sm" : "text-sm"} /></div>
+            <div><label className="text-xs font-medium text-card-foreground block mb-1">Phone</label><Input name="phone" value={formData.phone} onChange={handleChange} disabled={!isEditing} className={!isEditing ? "bg-muted/30 text-card-foreground opacity-100 text-sm" : "text-sm"} /></div>
+            <div><label className="text-xs font-medium text-card-foreground block mb-1">Role</label><Input name="role" value={formData.role} disabled className="bg-muted/30 text-card-foreground opacity-100 text-sm" /></div>
+            <div className="sm:col-span-2"><label className="text-xs font-medium text-card-foreground block mb-1">Company Address</label><Input name="address" value={formData.address} onChange={handleChange} disabled={!isEditing} className={!isEditing ? "bg-muted/30 text-card-foreground opacity-100 text-sm" : "text-sm"} /></div>
           </div>
           {isEditing && (
             <div className="mt-5 flex gap-2">
-              <Button onClick={handleSaveChanges} size="sm">Save Changes</Button>
-              <Button onClick={handleCancel} variant="outline" size="sm">Cancel</Button>
+              <Button onClick={handleSaveChanges} size="sm" disabled={loading}>{loading ? "Saving..." : "Save Changes"}</Button>
+              <Button onClick={handleCancel} variant="outline" size="sm" disabled={loading}>Cancel</Button>
             </div>
           )}
         </div>

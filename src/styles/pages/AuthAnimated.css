@@ -9,7 +9,7 @@
   background-color: white;
   position: relative;
   overflow: hidden;
-  height: calc(100vh - 80px); /* Strictly lock height to match viewport */
+  height: calc(100vh); /* Strictly lock height to match viewport */
   margin-bottom: -4rem; /* Cancel out the global App.css footer margin */
 }
 
@@ -64,7 +64,7 @@
 .form-content {
   width: 100%;
   max-width: 420px; 
-  margin: 0 auto; /* Removed forced top margin so flex dead-centers it */
+  margin: 3rem auto 0; /* Shifted down to clear navbar */
 }
 
 .login-panel {
@@ -178,6 +178,31 @@
   justify-content: center;
   gap: 0.5rem;
   box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+}
+
+.seller-redirect {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.seller-link {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.seller-link:hover {
+  text-decoration: underline;
+  transform: translateY(-1px);
 }
 
 /* ── Overlay Sliding Panel (The Image) ── */

@@ -5,19 +5,10 @@ import { DashboardHeader } from "./DashboardHeader";
 import { cn } from "../../lib/utils";
 import { AdminSearchProvider } from "../contexts/AdminSearchContext";
 import { ThemeProvider } from "../../components/common/ThemeProvider";
-import { useEffect } from "react";
 
 export function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  // Reset theme to light when leaving admin
-  useEffect(() => {
-    return () => {
-      document.documentElement.classList.remove("dark");
-      localStorage.removeItem("theme"); // Optional: clear admin theme or keep it for next time
-    };
-  }, []);
 
   return (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>

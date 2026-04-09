@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import Navbar from './components/common/Navbar';
 import ScrollToTop from './components/common/ScrollToTop';
 import Toast from './components/common/Toast';
@@ -32,12 +32,15 @@ import SellersPage from './admin/pages/SellersPage';
 import PrimaryVendorPage from './admin/pages/PrimaryVendorPage';
 import SellerAuthPage from './seller/pages/SellerAuthPage';
 import SellerDashboard from './seller/pages/SellerDashboard';
+import AdminSignupPage from './admin/pages/AdminSignupPage';
 import SellerProtectedRoute from './seller/components/SellerProtectedRoute';
 import AccountRedirect from './seller/components/AccountRedirect';
 import Wishlist from './buyer/pages/Wishlist';
+import BuyerProfile from './buyer/pages/BuyerProfile';
 import './styles/base/App.css';
 
 function StoreLayout() {
+  const navigate = useNavigate();
   return (
     <div className="app-container">
       <Navbar />
@@ -53,6 +56,7 @@ function StoreLayout() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/profile" element={<BuyerProfile />} />
           <Route path="/account" element={<AccountRedirect />} />
         </Routes>
       </main>
@@ -127,8 +131,9 @@ function App() {
                 <Route path="sellers" element={<SellersPage />} />
                 <Route path="vendor" element={<PrimaryVendorPage />} />
               </Route>
-              <Route path="/seller" element={<SellerAuthPage />} />
-              <Route path="/seller/*" element={<SellerProtectedRoute><SellerDashboard /></SellerProtectedRoute>} />
+                <Route path="/seller" element={<SellerAuthPage />} />
+                <Route path="/admin/signup" element={<AdminSignupPage />} />
+                <Route path="/seller/*" element={<SellerProtectedRoute><SellerDashboard /></SellerProtectedRoute>} />
               <Route path="/*" element={<StoreLayout />} />
             </Routes>
             </CartProvider>

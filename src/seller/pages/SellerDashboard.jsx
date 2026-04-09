@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import { useAuth } from "../../contexts/AuthContext";
 import { Textarea } from "../../components/ui/textarea";
 import { useToast } from "../../hooks/use-toast";
 import {
@@ -177,12 +178,24 @@ const Skeleton = ({ w = "100%", h = 20, r = 8 }) => (
 
  function App() {
   const [page, setPage] = useState("dashboard");
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState(() => {
+    return localStorage.getItem("sellerTheme") === "dark";
+  });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    localStorage.setItem("sellerTheme", dark ? "dark" : "light");
+    const root = window.document.documentElement;
+    if (dark) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  }, [dark]);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -195,9 +208,10 @@ const Skeleton = ({ w = "100%", h = 20, r = 8 }) => (
   }, [location.pathname]);
 
   const { products: contextProducts, addProduct: hookAddProduct, removeProduct, updateProduct } = useProducts();
+  const { currentUser, logoutUser } = useAuth();
 
   const [products, setProducts] = useState([]);
-  const [orders] = useState(generateOrders);
+  const [orders, setOrders] = useState([]);
   const [messages, setMessages] = useState(generateMessages);
   const [reviews, setReviews] = useState(generateReviews);
 
@@ -205,10 +219,21 @@ const Skeleton = ({ w = "100%", h = 20, r = 8 }) => (
     setProducts(contextProducts);
   }, [contextProducts]);
 
-  useEffect(() => { 
-   
+  const fetchOrders = async () => {
+    try {
+      const resp = await fetch('http://localhost:5000/api/orders');
+      const data = await resp.json();
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Fetch error:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+    const t = setTimeout(() => setLoading(false), 1200); 
+    return () => clearTimeout(t); 
   }, []);
-  useEffect(() => { const t = setTimeout(() => setLoading(false), 1200); return () => clearTimeout(t); }, []);
 
   const D = dark ? DARK : LIGHT;
 
@@ -226,7 +251,7 @@ const Skeleton = ({ w = "100%", h = 20, r = 8 }) => (
   
 
   const renderPage = () => {
-    const props = { products, setProducts, orders, messages, setMessages, reviews, setReviews, D, dark, loading, hookAddProduct, removeProduct, updateProduct };
+    const props = { products, setProducts, orders, fetchOrders, messages, setMessages, reviews, setReviews, D, dark, loading, hookAddProduct, removeProduct, updateProduct };
     switch (page) {
       case "dashboard": return <DashboardPage {...props} />;
       case "products": return <ProductsPage {...props} />;
@@ -287,17 +312,20 @@ const Skeleton = ({ w = "100%", h = 20, r = 8 }) => (
             </button>
             <div style={{ position: "relative" }}>
               <button onClick={() => { setProfileOpen(p => !p); setNotifOpen(false); }} style={{ ...styles.profileBtn, border: `2px solid ${D.border}` }}>
-                <div style={{ ...styles.avatar, width: 32, height: 32, background: "#10B981", fontSize: 12 }}>AM</div>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>{SELLER.name.split(" ")[0]}</span>
+                <div style={{ ...styles.avatar, width: 32, height: 32, background: "#10B981", fontSize: 12 }}>
+                  {(currentUser?.name || "S").split(" ").map(n => n[0]).join("").toUpperCase()}
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{currentUser?.name?.split(" ")[0] || "Seller"}</span>
                 <ChevronDown size={14} color={D.muted} />
               </button>
               {profileOpen && (
                 <div style={{ ...styles.dropdown, background: D.card, border: `1px solid ${D.border}`, right: 0, width: 200 }}>
-                  {[{ icon: User, label: "My Profile" }, { icon: LogOut, label: "Sign Out" }].map(({ icon: Icon, label }) => (
-                    <button key={label} onClick={() => { if (label === "My Profile") setPage("settings"); setProfileOpen(false); }} style={{ ...styles.dropItem, color: label === "Sign Out" ? "#ef4444" : D.text }}>
-                      <Icon size={15} /> {label}
-                    </button>
-                  ))}
+                  <button onClick={() => { setPage("settings"); setProfileOpen(false); }} style={styles.dropItem}>
+                    <User size={15} /> My Profile
+                  </button>
+                  <button onClick={() => { logoutUser(); navigate("/login"); }} style={{ ...styles.dropItem, color: "#ef4444" }}>
+                    <LogOut size={15} /> Sign Out
+                  </button>
                 </div>
               )}
             </div>
@@ -590,7 +618,7 @@ function ProductEditor({ editProduct, onSave, onCancel, D, dark }) {
     stock: editProduct?.stock || "",
     description: editProduct?.description || "",
     unit: editProduct?.unit || "1 kg",
-    images: editProduct?.images || (editProduct?.imageData ? [editProduct.imageData] : []),
+    images: editProduct?.images || (editProduct?.image ? [editProduct.image] : []),
     featured: editProduct?.featured || false,
     status: editProduct?.status || "active",
     variants: editProduct?.variants || [{ unit: editProduct?.unit || "1 kg", price: editProduct?.price || "", mrp: editProduct?.mrp || "", stock: editProduct?.stock || "" }]
@@ -1096,15 +1124,28 @@ function ProductsPage({ products, setProducts, D, dark, loading, orders = [], ho
   };
   
   const saveProduct = async (productData) => {
-    if (editProduct) {
-      await updateProduct(editProduct.id, productData);
-      toast({ title: "Product Updated", description: "Your changes have been saved successfully." });
-    } else {
-      await hookAddProduct(productData);
-      toast({ title: "Product Published", description: "Your new product is now live in the store." });
+    try {
+      if (editProduct) {
+        const success = await updateProduct(editProduct.id, productData);
+        if (success) {
+          toast({ title: "Product Updated", description: "Your changes have been saved to the database." });
+        } else {
+          toast({ title: "Update Failed", description: "Could not save changes to the database.", variant: "destructive" });
+        }
+      } else {
+        const result = await hookAddProduct(productData);
+        if (result && result.ok) {
+          toast({ title: "Product Published", description: "Your new product is now live in the store." });
+        } else {
+          toast({ title: "Publish Failed", description: "Could not save the new product.", variant: "destructive" });
+        }
+      }
+      setEditorView(false);
+      setEditProduct(null);
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error", description: "Something went wrong while saving.", variant: "destructive" });
     }
-    setEditorView(false);
-    setEditProduct(null);
   };
 
   if (loading) {
@@ -1587,15 +1628,32 @@ function ProductsPage({ products, setProducts, D, dark, loading, orders = [], ho
 
 // ─── ORDERS PAGE ─────────────────────────────────────────────────────────────
 
-function OrdersPage({ orders, D, loading }) {
+function OrdersPage({ orders, fetchOrders, D, loading }) {
   const [statusFilter, setStatusFilter] = useState("All");
   const [selected, setSelected] = useState(null);
-  const [localOrders, setLocalOrders] = useState(orders);
 
+  const localOrders = Array.isArray(orders) ? orders : [];
   const filtered = localOrders.filter(o => statusFilter === "All" || o.status === statusFilter);
-  const updateStatus = (id, status) => setLocalOrders(os => os.map(o => o.id === id ? { ...o, status } : o));
+  
+  const updateStatus = async (id, status) => {
+    try {
+      const resp = await fetch(`http://localhost:5000/api/orders/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      if (resp.ok) {
+        fetchOrders();
+        if (selected && selected.id === id) {
+          setSelected(prev => ({ ...prev, status }));
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-  const statuses = ["All", "Pending", "Shipped", "Delivered", "Returned"];
+  const statuses = ["All", "Processing", "Shipped", "Delivered", "Returned"];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -1631,28 +1689,28 @@ function OrdersPage({ orders, D, loading }) {
                     <td style={{ padding: "14px 16px", fontSize: 13, fontWeight: 600, color: "#10B981" }}>{o.id}</td>
                     <td style={{ padding: "14px 16px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ ...styles.avatar, width: 30, height: 30, background: avatarBg(o.customer || "User"), fontSize: 11 }}>{(o.customer || "U").split(" ").map(w => w[0]).join("")}</div>
+                        <div style={{ ...styles.avatar, width: 30, height: 30, background: avatarBg(o.customer_name || "User"), fontSize: 11 }}>{(o.customer_name || "U").split(" ").map(w => w[0]).join("")}</div>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 500 }}>{o.customer}</div>
-                          <div style={{ fontSize: 11, color: D.muted }}>{o.city}</div>
+                          <div style={{ fontSize: 13, fontWeight: 500 }}>{o.customer_name}</div>
+                          <div style={{ fontSize: 11, color: D.muted }}>{o.customer_email}</div>
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: "14px 16px", fontSize: 12, color: D.muted, maxWidth: 160 }}><span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.product}</span></td>
-                    <td style={{ padding: "14px 16px", fontSize: 13, fontWeight: 600 }}>{fmtShort(o.amount)}</td>
+                    <td style={{ padding: "14px 16px", fontSize: 12, color: D.muted, maxWidth: 160 }}><span style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{Array.isArray(o.items) ? o.items.map(i => i.name).join(', ') : 'Order Items'}</span></td>
+                    <td style={{ padding: "14px 16px", fontSize: 13, fontWeight: 600 }}>{fmtShort(o.total_amount)}</td>
                     <td style={{ padding: "14px 16px" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 5, width: "fit-content", background: sc.bg, color: sc.text, fontSize: 12, padding: "3px 10px", borderRadius: 20 }}>
                         <span style={{ width: 6, height: 6, borderRadius: "50%", background: sc.dot, display: "inline-block" }} />{o.status}
                       </span>
                     </td>
-                    <td style={{ padding: "14px 16px", fontSize: 12, color: D.muted, fontFamily: "monospace" }}>{o.trackingId || "—"}</td>
-                    <td style={{ padding: "14px 16px", fontSize: 12, color: D.muted }}>{o.date}</td>
+                    <td style={{ padding: "14px 16px", fontSize: 12, color: D.muted, fontFamily: "monospace" }}>{o.tracking_id || "—"}</td>
+                    <td style={{ padding: "14px 16px", fontSize: 12, color: D.muted }}>{new Date(o.created_at).toLocaleDateString()}</td>
                     <td style={{ padding: "14px 16px" }}>
                       <div style={{ display: "flex", gap: 4 }}>
                         <button onClick={() => setSelected(o)} style={{ ...styles.iconBtn, background: D.bg }}><Eye size={13} color={D.muted} /></button>
-                        {o.status === "Pending" && <button onClick={() => updateStatus(o.id, "Shipped")} style={{ ...styles.iconBtn, background: "rgba(96,165,250,0.1)" }}><Truck size={13} color="#2563eb" /></button>}
+                        {o.status === "Processing" && <button onClick={() => updateStatus(o.id, "Shipped")} style={{ ...styles.iconBtn, background: "rgba(96,165,250,0.1)" }}><Truck size={13} color="#2563eb" /></button>}
                         {o.status === "Shipped" && <button onClick={() => updateStatus(o.id, "Delivered")} style={{ ...styles.iconBtn, background: "rgba(134,239,172,0.1)" }}><Check size={13} color="#16a34a" /></button>}
-                        {o.status === "Returned" && <button onClick={() => updateStatus(o.id, "Pending")} style={{ ...styles.iconBtn, background: "rgba(239,68,68,0.1)" }}><RefreshCw size={13} color="#ef4444" /></button>}
+                        {o.status === "Returned" && <button onClick={() => updateStatus(o.id, "Processing")} style={{ ...styles.iconBtn, background: "rgba(239,68,68,0.1)" }}><RefreshCw size={13} color="#ef4444" /></button>}
                       </div>
                     </td>
                   </tr>
@@ -1666,7 +1724,7 @@ function OrdersPage({ orders, D, loading }) {
       {selected && (
         <Modal title={`Order ${selected.id}`} onClose={() => setSelected(null)} D={D}>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {[["Customer", selected.customer], ["City", selected.city], ["Product", selected.product], ["Amount", fmt(selected.amount)], ["Tracking ID", selected.trackingId || "—"], ["Date", selected.date]].map(([k, v]) => (
+            {[["Customer", selected.customer_name], ["Email", selected.customer_email], ["Total Amount", fmt(selected.total_amount)], ["Tracking ID", selected.tracking_id || "—"], ["Date", new Date(selected.created_at).toLocaleDateString()]].map(([k, v]) => (
               <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${D.border}` }}>
                 <span style={{ fontSize: 13, color: D.muted }}>{k}</span><span style={{ fontSize: 13, fontWeight: 600 }}>{v}</span>
               </div>
@@ -1685,10 +1743,11 @@ function OrdersPage({ orders, D, loading }) {
                 }}
                 style={{ padding: "6px 12px", borderRadius: 6, border: `1px solid ${D.border}`, background: D.bg, color: D.text }}
               >
-                <option value="Pending">Pending</option>
+                <option value="Processing">Processing</option>
                 <option value="Shipped">Shipped</option>
                 <option value="Delivered">Delivered</option>
                 <option value="Returned">Returned</option>
+                <option value="Cancelled">Cancelled</option>
               </select>
             </div>
           </div>
@@ -2491,10 +2550,45 @@ function ReviewsPage({ reviews, setReviews, D }) {
 // ─── SETTINGS PAGE ───────────────────────────────────────────────────────────
 
 function SettingsPage({ D, dark, setDark }) {
+  const { currentUser, loginUser } = useAuth();
   const [notifPrefs, setNotifPrefs] = useState({ orders: true, payments: true, reviews: false, messages: true });
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    storeName: currentUser?.storeName || "",
+    name: currentUser?.name || "",
+    email: currentUser?.email || "",
+    phone: currentUser?.phone || ""
+  });
 
-  const save = () => { setSaved(true); setTimeout(() => setSaved(false), 2000); };
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const save = async () => {
+    setLoading(true);
+    try {
+      const resp = await fetch(`http://localhost:5000/api/auth/profile/${currentUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, role: 'seller' })
+      });
+      const data = await resp.json();
+      if (resp.ok) {
+        loginUser(data.user);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      } else {
+        alert(data.message || "Failed to update profile");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Server error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -2503,13 +2597,20 @@ function SettingsPage({ D, dark, setDark }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <div style={{ ...styles.card(D), padding: 24 }}>
           <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 18, display: "flex", alignItems: "center", gap: 8 }}><User size={16} color="#10B981" /> Profile Settings</div>
-          {[["Store Name", "LuxeJewels™"], ["Full Name", SELLER.name], ["Email", SELLER.email], ["Phone", SELLER.phone]].map(([l, v]) => (
-            <div key={l} style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: D.muted, display: "block", marginBottom: 6 }}>{l}</label>
-              <input defaultValue={v} style={{ ...styles.input(D), width: "100%" }} />
+          {[
+            { label: "Store Name", name: "storeName" },
+            { label: "Full Name", name: "name" },
+            { label: "Email", name: "email" },
+            { label: "Phone", name: "phone" }
+          ].map((f) => (
+            <div key={f.name} style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: D.muted, display: "block", marginBottom: 6 }}>{f.label}</label>
+              <input name={f.name} value={form[f.name]} onChange={handleChange} style={{ ...styles.input(D), width: "100%" }} />
             </div>
           ))}
-          <button onClick={save} style={{ ...styles.goldBtn, marginTop: 8 }}>{saved ? <><Check size={14} /> Saved!</> : "Save Changes"}</button>
+          <button onClick={save} disabled={loading} style={{ ...styles.goldBtn, marginTop: 8 }}>
+            {loading ? "Saving..." : saved ? <><Check size={14} /> Saved!</> : "Save Changes"}
+          </button>
         </div>
 
         <div style={{ ...styles.card(D), padding: 24 }}>

@@ -6,9 +6,11 @@ import { ThemeToggle } from "../../components/common/ThemeToggle";
 
 export function DashboardHeader({ onMenuClick }) {
   const navigate = useNavigate();
-  const { adminLogout } = useAuth();
+  const { currentUser, logoutUser } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+
+  const initials = (currentUser?.name || "AD").split(" ").map(n => n[0]).join("").toUpperCase();
 
   const notifications = [
     { id: 1, title: "Order Delivered", message: "Order #ORD-78451 delivered successfully", time: "12 min ago", type: "success" },
@@ -16,18 +18,9 @@ export function DashboardHeader({ onMenuClick }) {
     { id: 3, title: "New Order", message: "Order #ORD-78452 received from Priya Patel", time: "2 hrs ago", type: "info" },
   ];
 
-  const getProfileData = () => {
-    const saved = localStorage.getItem("adminProfile");
-    return saved
-      ? JSON.parse(saved)
-      : { fullName: "Admin Director", email: "admin@trendydrapes.com", phone: "+91 98765-43210", role: "Super Admin" };
-  };
-
-  const profile = getProfileData();
-
   const handleLogout = () => {
-    adminLogout();
-    navigate("/profile");
+    logoutUser();
+    navigate("/login");
   };
 
   return (
@@ -48,7 +41,7 @@ export function DashboardHeader({ onMenuClick }) {
           <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
         </button>
         <button onClick={() => { setShowProfile(!showProfile); setShowNotifications(false); }} className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-[11px] font-bold hover:opacity-90 transition-opacity">
-          AD
+          {initials}
         </button>
 
         {showNotifications && (
@@ -82,20 +75,20 @@ export function DashboardHeader({ onMenuClick }) {
           <div className="absolute right-0 top-12 w-72 bg-card rounded-lg border shadow-lg z-50">
             <div className="p-4 space-y-4">
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">AD</div>
+                <div className="h-12 w-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">{initials}</div>
                 <div>
-                  <p className="font-semibold text-sm text-card-foreground">{profile.fullName}</p>
-                  <p className="text-xs text-muted-foreground">{profile.role}</p>
+                  <p className="font-semibold text-sm text-card-foreground">{currentUser?.name || "Admin"}</p>
+                  <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
                 </div>
               </div>
               <div className="border-t pt-3 space-y-2">
                 <div className="flex items-center gap-2 text-sm">
                   <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-card-foreground">{profile.email}</span>
+                  <span className="text-sm text-card-foreground">{currentUser?.email}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-card-foreground">{profile.phone}</span>
+                  <span className="text-sm text-card-foreground">{currentUser?.phone || "Not Set"}</span>
                 </div>
               </div>
               <div className="border-t pt-3">

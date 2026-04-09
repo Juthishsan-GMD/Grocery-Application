@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { StatCard } from "../../admin/components/StatCard";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -209,7 +209,25 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState(null);
 
   // Mutable orders state — all updates live here
-  const [orders, setOrders] = useState(INITIAL_ORDERS);
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      const resp = await fetch('http://localhost:5000/api/orders');
+      const data = await resp.json();
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setOrders([]);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
 
   // Per-modal edit state
   const [editStatus, setEditStatus]           = useState("");
@@ -226,46 +244,60 @@ export default function OrdersPage() {
     setSelectedOrder(o);
     setEditStatus(o.status);
     setEditCourier(o.courier || "BlueDart Express");
-    setEditTrackingId(o.trackingId || "");
-    setEditEstDate(o.estimatedDelivery || "");
-    setEditTrackingLink(o.trackingLink || "");
+    setEditTrackingId(o.tracking_id || "");
+    setEditEstDate(o.estimated_delivery || "");
+    setEditTrackingLink(o.tracking_link || "");
     setStatusSaved(false);
     setTrackingSaved(false);
   };
 
   const closeModal = () => setSelectedOrder(null);
 
-  const handleUpdateStatus = () => {
-    setOrders(prev =>
-      prev.map(o => o.id === selectedOrder.id ? { ...o, status: editStatus } : o)
-    );
-    setSelectedOrder(prev => ({ ...prev, status: editStatus }));
-    setStatusSaved(true);
-    setTimeout(() => setStatusSaved(false), 2000);
+  const handleUpdateStatus = async () => {
+    try {
+      const resp = await fetch(`http://localhost:5000/api/orders/${selectedOrder.id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          status: editStatus,
+          courier: editCourier,
+          tracking_id: editTrackingId,
+          est_delivery: editEstDate
+        })
+      });
+      if (resp.ok) {
+        fetchOrders(); // Refresh
+        setStatusSaved(true);
+        setTimeout(() => setStatusSaved(false), 2000);
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleSaveTracking = () => {
-    const update = {
-      courier: editCourier,
-      trackingId: editTrackingId,
-      estimatedDelivery: editEstDate,
-      trackingLink: editTrackingLink,
-    };
-    setOrders(prev =>
-      prev.map(o => o.id === selectedOrder.id ? { ...o, ...update } : o)
-    );
-    setSelectedOrder(prev => ({ ...prev, ...update }));
+  const handleSaveTracking = async () => {
+    // Same as update status for simplicity here
+    handleUpdateStatus();
     setTrackingSaved(true);
     setTimeout(() => setTrackingSaved(false), 2000);
   };
 
-  const filtered = orders.filter((o) => {
+  // Stat calcs
+  const stats = {
+    total: Array.isArray(orders) ? orders.length : 0,
+    shipped: Array.isArray(orders) ? orders.filter(o => o.status === 'Shipped').length : 0,
+    delivered: Array.isArray(orders) ? orders.filter(o => o.status === 'Delivered').length : 0,
+    cancelled: Array.isArray(orders) ? orders.filter(o => o.status === 'Cancelled').length : 0,
+    returned: Array.isArray(orders) ? orders.filter(o => o.status === 'Returned').length : 0,
+  };
+
+  const filtered = Array.isArray(orders) ? orders.filter((o) => {
     const matchesSearch =
       o.id.toLowerCase().includes(search.toLowerCase()) ||
-      o.customer.toLowerCase().includes(search.toLowerCase());
+      o.customer_name?.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "All" || o.status === statusFilter;
     return matchesSearch && matchesStatus;
-  });
+  }) : [];
 
   return (
     <div className="space-y-5">
@@ -276,11 +308,11 @@ export default function OrdersPage() {
 
       {/* Stat Cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
-        <StatCard title="Total Orders" value="5,120"  todayValue="128" change="+8.4% this month"   changeType="positive" icon={ShoppingCart} />
-        <StatCard title="Shipped"      value="1,128"  todayValue="42"  change="In transit"          changeType="neutral"  icon={Truck} />
-        <StatCard title="Delivered"    value="2,970"  todayValue="86"  change="58% delivery rate"   changeType="positive" icon={CheckCircle2} />
-        <StatCard title="Cancelled"    value="256"    todayValue="12"  change="5% cancel rate"      changeType="negative" icon={XCircle} />
-        <StatCard title="Returns"      value="154"    todayValue="8"   change="3% return rate"      changeType="negative" icon={RotateCcw} />
+        <StatCard title="Total Orders" value={stats.total.toLocaleString()}  todayValue="Auto" change="Real-time data"   changeType="positive" icon={ShoppingCart} />
+        <StatCard title="Shipped"      value={stats.shipped.toLocaleString()}  todayValue="—"  change="In transit"          changeType="neutral"  icon={Truck} />
+        <StatCard title="Delivered"    value={stats.delivered.toLocaleString()}  todayValue="—"  change="Delivery rate"   changeType="positive" icon={CheckCircle2} />
+        <StatCard title="Cancelled"    value={stats.cancelled.toLocaleString()}    todayValue="—"  change="Cancel rate"      changeType="negative" icon={XCircle} />
+        <StatCard title="Returns"      value={stats.returned.toLocaleString()}    todayValue="—"   change="Return rate"      changeType="negative" icon={RotateCcw} />
       </div>
 
       {/* Charts */}
@@ -380,19 +412,19 @@ export default function OrdersPage() {
                   <td className="font-medium text-card-foreground">{o.id}</td>
                   <td>
                     <div>
-                      <p className="text-card-foreground text-sm">{o.customer}</p>
-                      <p className="text-[10px] text-muted-foreground">{o.email}</p>
+                      <p className="text-card-foreground text-sm">{o.customer_name}</p>
+                      <p className="text-[10px] text-muted-foreground">{o.customer_email}</p>
                     </div>
                   </td>
-                  <td className="text-card-foreground">{o.seller}</td>
-                  <td className="text-muted-foreground">{o.items}</td>
-                  <td className="font-medium text-card-foreground">{o.total}</td>
-                  <td><span className={paymentStyle[o.payment]}>{o.payment}</span></td>
-                  <td className="text-muted-foreground text-xs">{o.date}</td>
+                  <td className="text-card-foreground">FreshBasket™</td>
+                  <td className="text-muted-foreground">{o.items?.length || 0}</td>
+                  <td className="font-medium text-card-foreground">₹{o.total_amount}</td>
+                  <td><span className={paymentStyle[o.payment_method] || "badge-info"}>{o.payment_method}</span></td>
+                  <td className="text-muted-foreground text-xs">{new Date(o.created_at).toLocaleDateString()}</td>
                   <td><span className={`text-xs font-medium ${statusStyle[o.status]}`}>{o.status}</span></td>
                   <td className="text-xs text-muted-foreground">{o.courier || "—"}</td>
-                  <td className="text-xs text-muted-foreground font-mono">{o.trackingId || "—"}</td>
-                  <td className="text-xs text-muted-foreground">{o.estimatedDelivery || "—"}</td>
+                  <td className="text-xs text-muted-foreground font-mono">{o.tracking_id || "—"}</td>
+                  <td className="text-xs text-muted-foreground">{o.estimated_delivery || "—"}</td>
                   <td>
                     <button
                       onClick={() => openOrder(o)}
@@ -466,26 +498,17 @@ export default function OrdersPage() {
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Customer &amp; Shipping</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <p className="font-medium text-card-foreground text-sm">{selectedOrder.customer}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{selectedOrder.email}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">+91 98765 43210</p>
+                      <p className="font-medium text-card-foreground text-sm">{selectedOrder.customer_name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{selectedOrder.customer_email}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{selectedOrder.customer_phone}</p>
                     </div>
                     <div>
                       <div className="flex items-start gap-1.5">
                         <MapPin className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                         <div>
                           <p className="text-xs text-card-foreground leading-relaxed">
-                            Plot No. 42, Silicon Valley Layout,<br />
-                            Madhapur, Hyderabad, TS 500081
+                            {selectedOrder.shipping_address}
                           </p>
-                          <a
-                            href="https://maps.google.com/?q=Madhapur,Hyderabad"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-[11px] text-primary hover:underline mt-1 inline-flex items-center gap-1"
-                          >
-                            View on Google Maps <ExternalLink className="h-2.5 w-2.5" />
-                          </a>
                         </div>
                       </div>
                     </div>
@@ -588,7 +611,7 @@ export default function OrdersPage() {
                 </div>
 
                 {/* Current tracking display */}
-                {(selectedOrder.trackingId || selectedOrder.courier) && (
+                {(selectedOrder.tracking_id || selectedOrder.courier) && (
                   <div className="rounded-md bg-secondary/40 p-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                     <div>
                       <p className="text-muted-foreground font-medium mb-0.5">Courier</p>
@@ -596,16 +619,16 @@ export default function OrdersPage() {
                     </div>
                     <div>
                       <p className="text-muted-foreground font-medium mb-0.5">Tracking ID</p>
-                      <p className="text-card-foreground font-mono font-semibold">{selectedOrder.trackingId || "—"}</p>
+                      <p className="text-card-foreground font-mono font-semibold">{selectedOrder.tracking_id || "—"}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground font-medium mb-0.5">Est. Delivery</p>
-                      <p className="text-card-foreground font-semibold">{selectedOrder.estimatedDelivery || "—"}</p>
+                      <p className="text-card-foreground font-semibold">{selectedOrder.estimated_delivery || "—"}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground font-medium mb-0.5">Tracking Link</p>
-                      {selectedOrder.trackingLink ? (
-                        <a href={selectedOrder.trackingLink} target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
+                      {selectedOrder.tracking_link ? (
+                        <a href={selectedOrder.tracking_link} target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
                           Open <ExternalLink className="h-2.5 w-2.5" />
                         </a>
                       ) : <p className="text-muted-foreground">—</p>}
@@ -617,7 +640,7 @@ export default function OrdersPage() {
               {/* Order Items */}
               <div>
                 <h3 className="text-sm font-semibold text-card-foreground mb-3 flex items-center gap-1.5 border-b pb-2">
-                  <Package className="h-4 w-4" /> Ordered Items ({selectedOrder.items})
+                  <Package className="h-4 w-4" /> Ordered Items ({Array.isArray(selectedOrder.items) ? selectedOrder.items.length : 0})
                 </h3>
                 <div className="overflow-x-auto rounded-lg border">
                   <table className="w-full text-sm">
@@ -631,26 +654,24 @@ export default function OrdersPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {Array.from({ length: selectedOrder.items }).map((_, i) => {
-                        const raw = parseFloat(selectedOrder.total.replace(/[^0-9.]/g, ""));
-                        const basePrice = (raw / selectedOrder.items).toFixed(2);
+                      {(Array.isArray(selectedOrder.items) ? selectedOrder.items : []).map((item, i) => {
                         return (
                           <tr key={i} className="hover:bg-secondary/20">
                             <td className="px-3 py-3">
                               <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded border bg-secondary flex items-center justify-center shrink-0">
-                                  <Package className="h-5 w-5 text-muted-foreground" />
+                                <div className="h-10 w-10 rounded border bg-secondary flex items-center justify-center shrink-0 overflow-hidden">
+                                  <img src={item.image} alt={item.name} className="h-full w-full object-cover" onError={e => e.target.src = 'https://via.placeholder.com/40'} />
                                 </div>
                                 <div>
-                                  <p className="font-medium text-card-foreground line-clamp-1">Product Item {i + 1}</p>
-                                  <p className="text-xs text-muted-foreground">{selectedOrder.seller}</p>
+                                  <p className="font-medium text-card-foreground line-clamp-1">{item.name}</p>
+                                  <p className="text-xs text-muted-foreground">FreshBasket™</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-3 py-3 text-right text-card-foreground font-medium">1</td>
-                            <td className="px-3 py-3 text-right text-muted-foreground">₹{basePrice}</td>
-                            <td className="px-3 py-3 text-right text-success text-xs">10%</td>
-                            <td className="px-3 py-3 text-right font-medium text-card-foreground">₹{(basePrice * 0.9).toFixed(2)}</td>
+                            <td className="px-3 py-3 text-right text-card-foreground font-medium">{item.quantity}</td>
+                            <td className="px-3 py-3 text-right text-muted-foreground">₹{item.price}</td>
+                            <td className="px-3 py-3 text-right text-success text-xs">Applied</td>
+                            <td className="px-3 py-3 text-right font-medium text-card-foreground">₹{(item.price * item.quantity).toFixed(2)}</td>
                           </tr>
                         );
                       })}

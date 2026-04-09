@@ -89,7 +89,7 @@ const Home = () => {
         <div className="container">
           <div className="section-header section-text-center">
             <h2 className="section-title">Top Deals of the Day</h2>
-            <p className="section-subtitle text-center">Grab these limited-time offers before they're gone!</p>
+            {/* <p className="section-subtitle text-center">Grab these limited-time offers before they're gone!</p> */}
           </div>
           
           <div className="deals-grid">

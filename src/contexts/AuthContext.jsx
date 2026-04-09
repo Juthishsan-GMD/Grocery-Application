@@ -5,11 +5,17 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [isSeller, setIsSeller] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const admin = localStorage.getItem('isAdmin');
     if (admin === 'true') {
       setIsAdmin(true);
+    }
+    const seller = localStorage.getItem('isSeller');
+    if (seller === 'true') {
+      setIsSeller(true);
     }
     const user = localStorage.getItem('current_user');
     if (user) {
@@ -19,10 +25,11 @@ export function AuthProvider({ children }) {
         // ignore
       }
     }
+    setLoading(false);
   }, []);
 
   const adminLogin = (email, password) => {
-    // Temp credentials as requested
+    // Keep internal admin check for simplicity
     if (email === 'admin@freshbasket.com' && password === 'admin123') {
       setIsAdmin(true);
       localStorage.setItem('isAdmin', 'true');
@@ -40,15 +47,30 @@ export function AuthProvider({ children }) {
   const loginUser = (userData) => {
     setCurrentUser(userData);
     localStorage.setItem('current_user', JSON.stringify(userData));
+    localStorage.setItem('isLoggedIn', 'true');
+    if (userData.role === 'admin') {
+      setIsAdmin(true);
+      localStorage.setItem('isAdmin', 'true');
+    }
+    if (userData.role === 'seller') {
+      setIsSeller(true);
+      localStorage.setItem('isSeller', 'true');
+    }
   };
 
   const logoutUser = () => {
     setCurrentUser(null);
+    setIsAdmin(false);
+    setIsSeller(false);
     localStorage.removeItem('current_user');
+    localStorage.removeItem('isAdmin');
+    localStorage.removeItem('isSeller');
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('token');
   };
 
   return (
-    <AuthContext.Provider value={{ isAdmin, adminLogin, adminLogout, currentUser, loginUser, logoutUser }}>
+    <AuthContext.Provider value={{ isAdmin, isSeller, adminLogin, adminLogout, currentUser, loginUser, logoutUser, loading }}>
       {children}
     </AuthContext.Provider>
   );

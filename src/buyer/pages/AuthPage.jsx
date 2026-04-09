@@ -9,10 +9,11 @@ const AuthPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { showToast } = useCart();
-  const { adminLogin, loginUser } = useAuth();
+  const { loginUser } = useAuth();
   
   const [isSignUp, setIsSignUp] = useState(location.pathname === '/signup');
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setIsSignUp(location.pathname === '/signup');
@@ -23,72 +24,53 @@ const AuthPage = () => {
     navigate(nextRoute, { replace: true });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    if (!isSignUp && formData.email === 'admin@freshbasket.com' && formData.password === 'admin123') {
-      if (adminLogin(formData.email, formData.password)) {
-        showToast('Welcome to the Admin Dashboard');
-        navigate('/admin');
-        return;
-      }
-    }
+    const endpoint = isSignUp ? '/api/auth/signup' : '/api/auth/login';
+    const baseUrl = 'http://localhost:5000';
 
-    if (!isSignUp && formData.email === 'seller@freshbasket.com' && formData.password === 'seller123') {
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('user', JSON.stringify({ fullName: 'Arjun Mehta', email: 'seller@freshbasket.com', role: 'seller' }));
-      showToast('Welcome to the Seller Center');
-      navigate('/seller/dashboard');
-      return;
-    }
+    try {
+      const response = await fetch(`${baseUrl}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
 
-    const users = JSON.parse(localStorage.getItem('grocery_users') || '[]');
+      const data = await response.json();
 
-    if (isSignUp) {
-      const userExists = users.find(u => u.email === formData.email);
-      if (userExists) {
-        showToast('Email already registered! Please sign in.');
-        return;
-      }
-      
-      const newUser = { name: formData.name, email: formData.email, password: formData.password };
-      users.push(newUser);
-      localStorage.setItem('grocery_users', JSON.stringify(users));
-      
-      loginUser({ name: formData.name, email: formData.email, role: 'buyer' });
-      showToast('Account created successfully!');
-      
-      localStorage.setItem('divine_customer_name', formData.name);
-      localStorage.setItem('divine_customer_email', formData.email);
-      
-      navigate('/');
-    } else {
-      const user = users.find(u => u.email === formData.email && u.password === formData.password);
-      if (user) {
-        loginUser({ name: user.name, email: user.email, role: 'buyer' });
-        showToast(`Welcome back, ${user.name}!`);
+      if (response.ok) {
+        localStorage.setItem('token', data.token);
+        loginUser(data.user);
         
-        localStorage.setItem('divine_customer_name', user.name);
-        localStorage.setItem('divine_customer_email', user.email);
+        showToast(isSignUp ? 'Account created successfully!' : `Welcome back, ${data.user.name}!`);
         
-        navigate('/');
+        localStorage.setItem('divine_customer_name', data.user.name);
+        localStorage.setItem('divine_customer_email', data.user.email);
+        
+        // Redirect based on role
+        if (data.user.role === 'admin') navigate('/admin');
+        else if (data.user.role === 'seller') navigate('/seller/dashboard');
+        else navigate('/');
       } else {
-        showToast('Invalid email or password.');
+        showToast(data.message || 'Authentication failed.');
       }
+    } catch (err) {
+      console.error(err);
+      showToast('Connection error. Please ensure backend is running.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className={`auth-split-wrapper ${isSignUp ? 'is-signup' : ''}`}>
-      
-      {/* Background blobs for extra sauce */}
       <div className="auth-blob auth-blob-1"></div>
       <div className="auth-blob auth-blob-2"></div>
-
-      {/* The Floating Split Container */}
       <div className="split-container">
         
-        {/* SIGN IN FORM (Left aligned by default) */}
+        {/* SIGN IN FORM */}
         <div className="form-panel login-panel">
           <div className="form-content">
             <h1 className="auth-title">Welcome Back</h1>
@@ -116,14 +98,14 @@ const AuthPage = () => {
                 </div>
               </div>
 
-              <button type="submit" className="btn btn-primary auth-btn">
-                Sign In <FiArrowRight className="btn-icon" />
+              <button type="submit" className="btn btn-primary auth-btn" disabled={loading}>
+                {loading ? 'Processing...' : 'Sign In'} <FiArrowRight className="btn-icon" />
               </button>
             </form>
           </div>
         </div>
 
-        {/* SIGN UP FORM (Right aligned, hidden under image by default) */}
+        {/* SIGN UP FORM */}
         <div className="form-panel signup-panel">
           <div className="form-content">
             <h1 className="auth-title">Create Account</h1>
@@ -157,24 +139,34 @@ const AuthPage = () => {
                 </div>
               </div>
 
-              <button type="submit" className="btn btn-primary auth-btn">
-                Sign Up <FiArrowRight className="btn-icon" />
+              <button type="submit" className="btn btn-primary auth-btn" disabled={loading}>
+                {loading ? 'Creating...' : 'Sign Up'} <FiArrowRight className="btn-icon" />
               </button>
+              
+              <div className="seller-redirect">
+                <span>Are you a seller?</span>
+                <button type="button" onClick={() => navigate('/seller')} className="seller-link">
+                  Register as Seller
+                </button>
+              </div>
+              <div className="seller-redirect" style={{ marginTop: '0.5rem' }}>
+                <span>Are you an Admin?</span>
+                <button type="button" onClick={() => navigate('/admin/signup')} className="seller-link" style={{ color: '#4F46E5' }}>
+                  Register as Admin
+                </button>
+              </div>
             </form>
           </div>
         </div>
 
-        {/* OVERLAY PANEL (The sliding image block) */}
+        {/* OVERLAY PANEL */}
         <div className="overlay-panel">
           <div className="overlay-content">
-            {/* Login Overlay Text (Visible when on Sign In) */}
             <div className="overlay-text overlay-login-text">
               <h2>New Here?</h2>
               <p>Discover thousands of fresh organic products waiting for you.</p>
               <button className="btn btn-outline overlay-btn" type="button" onClick={toggleMode}>Create an Account</button>
             </div>
-            
-            {/* Signup Overlay Text (Visible when on Sign Up) */}
             <div className="overlay-text overlay-signup-text">
               <h2>One of Us?</h2>
               <p>Sign in with your email to track your orders and shop fast.</p>

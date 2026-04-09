@@ -161,31 +161,24 @@ export default function AddProductPage() {
     };
 
     if (!isEditMode) {
-      product.id = `local-${Date.now()}`;
-      product.isNew = true;
       const result = await addProduct(product);
       setSubmitting(false);
 
       if (result.ok) {
         toast({ title: "✅ Product Live!", description: `${product.name} is now available in the store.` });
         navigate("/admin/products");
-        return;
+      } else {
+        toast({ title: "Error", description: "Could not save to database. Check server connection.", variant: "destructive" });
       }
-      
-      if (result.reason === "quota") {
-        if (window.confirm("Browser storage is full. Clear old products to continue?")) {
-          clearAllProducts();
-          toast({ title: "Storage Cleared", description: "Please try adding the product again." });
-        }
-        return;
-      }
-      
-      toast({ title: "Error", description: "Could not save. Try using smaller images.", variant: "destructive" });
     } else {
-      updateProduct(id, product);
+      const result = await updateProduct(id, product);
       setSubmitting(false);
-      toast({ title: "✅ Product Updated!", description: `${product.name} has been successfully updated.` });
-      navigate("/admin/products");
+      if (result) {
+        toast({ title: "✅ Product Updated!", description: `${product.name} has been successfully updated.` });
+        navigate("/admin/products");
+      } else {
+        toast({ title: "Error", description: "Failed to update product in database.", variant: "destructive" });
+      }
     }
   };
 
