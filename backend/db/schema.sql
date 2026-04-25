@@ -14,6 +14,7 @@ DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'gender_enum') THEN
         CREATE TYPE gender_enum AS ENUM ('Male', 'Female', 'Other', 'Prefer Not to Say');
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'finance_transaction_type') THEN
         CREATE TYPE finance_transaction_type AS ENUM ('Sale', 'Refund', 'Payout', 'Adjustment');
     END IF;
@@ -60,6 +61,16 @@ CREATE SEQUENCE IF NOT EXISTS half_yearly_finance_id_seq;
 CREATE SEQUENCE IF NOT EXISTS annual_finance_id_seq;
 CREATE SEQUENCE IF NOT EXISTS seller_kyc_id_seq;
 CREATE SEQUENCE IF NOT EXISTS seller_agreement_id_seq;
+CREATE SEQUENCE IF NOT EXISTS shiprocket_order_id_seq;
+CREATE SEQUENCE IF NOT EXISTS shiprocket_payload_id_seq;
+CREATE SEQUENCE IF NOT EXISTS shiprocket_tracking_id_seq;
+CREATE SEQUENCE IF NOT EXISTS shiprocket_webhook_id_seq;
+CREATE SEQUENCE IF NOT EXISTS delivery_id_seq;
+CREATE SEQUENCE IF NOT EXISTS reverse_id_seq;
+CREATE SEQUENCE IF NOT EXISTS return_request_id_seq;
+CREATE SEQUENCE IF NOT EXISTS commission_id_seq;
+CREATE SEQUENCE IF NOT EXISTS audit_id_seq;
+CREATE SEQUENCE IF NOT EXISTS order_status_history_id_seq;
 
 -- Table-specific formatting functions
 CREATE OR REPLACE FUNCTION format_customer_id() RETURNS TRIGGER AS $$
@@ -275,6 +286,66 @@ END; $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION format_annual_finance_id() RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.annual_finance_id IS NULL THEN NEW.annual_finance_id := 'AF' || LPAD(nextval('annual_finance_id_seq')::text, 3, '0'); END IF;
+    RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION format_shiprocket_order_id() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.sr_order_id IS NULL THEN NEW.sr_order_id := 'SRO' || LPAD(nextval('shiprocket_order_id_seq')::text, 3, '0'); END IF;
+    RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION format_shiprocket_payload_id() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.payload_id IS NULL THEN NEW.payload_id := 'SRP' || LPAD(nextval('shiprocket_payload_id_seq')::text, 3, '0'); END IF;
+    RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION format_shiprocket_tracking_id() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.tracking_id IS NULL THEN NEW.tracking_id := 'SRT' || LPAD(nextval('shiprocket_tracking_id_seq')::text, 3, '0'); END IF;
+    RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION format_shiprocket_webhook_id() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.webhook_id IS NULL THEN NEW.webhook_id := 'SRW' || LPAD(nextval('shiprocket_webhook_id_seq')::text, 3, '0'); END IF;
+    RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION format_delivery_id() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.delivery_id IS NULL THEN NEW.delivery_id := 'DLV' || LPAD(nextval('delivery_id_seq')::text, 3, '0'); END IF;
+    RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION format_reverse_id() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.reverse_id IS NULL THEN NEW.reverse_id := 'RSV' || LPAD(nextval('reverse_id_seq')::text, 3, '0'); END IF;
+    RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION format_return_request_id() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.return_request_id IS NULL THEN NEW.return_request_id := 'RET' || LPAD(nextval('return_request_id_seq')::text, 3, '0'); END IF;
+    RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION format_commission_id() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.commission_id IS NULL THEN NEW.commission_id := 'SCM' || LPAD(nextval('commission_id_seq')::text, 3, '0'); END IF;
+    RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION format_audit_id() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.audit_id IS NULL THEN NEW.audit_id := 'ADT' || LPAD(nextval('audit_id_seq')::text, 3, '0'); END IF;
+    RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION format_order_status_history_id() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.history_id IS NULL THEN NEW.history_id := 'OSH' || LPAD(nextval('order_status_history_id_seq')::text, 3, '0'); END IF;
     RETURN NEW;
 END; $$ LANGUAGE plpgsql;
 
@@ -513,6 +584,7 @@ CREATE TABLE IF NOT EXISTS order_items (
     product_id VARCHAR(20) NOT NULL REFERENCES products(product_id),
     variant_id VARCHAR(20) REFERENCES product_variants(variant_id),
     seller_id VARCHAR(20) REFERENCES sellers(seller_id),
+    admin_id VARCHAR(20) REFERENCES admins(admin_id),
     quantity INT NOT NULL,
     unit_price DECIMAL(10,2) NOT NULL,
     total_price DECIMAL(10,2) NOT NULL,
@@ -526,6 +598,7 @@ CREATE TABLE IF NOT EXISTS order_sellers (
     order_seller_id VARCHAR(20) PRIMARY KEY,
     order_id VARCHAR(20) REFERENCES orders(order_id) ON DELETE CASCADE,
     seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+    admin_id VARCHAR(20) REFERENCES admins(admin_id) ON DELETE CASCADE,
     seller_subtotal DECIMAL(10,2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -543,6 +616,7 @@ CREATE TABLE IF NOT EXISTS coupon_usage (
 CREATE TABLE IF NOT EXISTS payments (
     payment_id VARCHAR(20) PRIMARY KEY,
     seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE SET NULL,
+    admin_id VARCHAR(20) REFERENCES admins(admin_id) ON DELETE SET NULL,
     customer_id VARCHAR(20) REFERENCES customers(customer_id) ON DELETE SET NULL,
     order_id VARCHAR(20) REFERENCES orders(order_id) ON DELETE CASCADE,
     payment_method VARCHAR(50),
@@ -610,6 +684,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     notification_id VARCHAR(20) PRIMARY KEY,
     customer_id VARCHAR(20) REFERENCES customers(customer_id) ON DELETE CASCADE,
     seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+    admin_id VARCHAR(20) REFERENCES admins(admin_id) ON DELETE CASCADE,
     order_id VARCHAR(20) REFERENCES orders(order_id) ON DELETE CASCADE,
     type VARCHAR(50) NOT NULL,
     message TEXT NOT NULL,
@@ -677,75 +752,87 @@ CREATE TABLE IF NOT EXISTS seller_agreements (
 CREATE TABLE IF NOT EXISTS annual_finances (
     annual_finance_id VARCHAR(20) PRIMARY KEY,
     seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+    admin_id VARCHAR(20) REFERENCES admins(admin_id) ON DELETE CASCADE,
     year INT NOT NULL,
     total_revenue DECIMAL(15,2) DEFAULT 0,
     platform_commission DECIMAL(15,2) DEFAULT 0,
     net_seller_earnings DECIMAL(15,2) DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (seller_id, admin_id, year)
 );
 
 -- 30. HALF_YEARLY_FINANCES Table
 CREATE TABLE IF NOT EXISTS half_yearly_finances (
     half_yearly_finance_id VARCHAR(20) PRIMARY KEY,
     seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+    admin_id VARCHAR(20) REFERENCES admins(admin_id) ON DELETE CASCADE,
     half_number INT NOT NULL, -- 1 or 2
     year INT NOT NULL,
     annual_finance_id VARCHAR(20) REFERENCES annual_finances(annual_finance_id),
     total_revenue DECIMAL(15,2) DEFAULT 0,
     platform_commission DECIMAL(15,2) DEFAULT 0,
     net_seller_earnings DECIMAL(15,2) DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (seller_id, admin_id, half_number, year)
 );
 
 -- 31. QUARTERLY_FINANCES Table
 CREATE TABLE IF NOT EXISTS quarterly_finances (
     quarterly_finance_id VARCHAR(20) PRIMARY KEY,
     seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+    admin_id VARCHAR(20) REFERENCES admins(admin_id) ON DELETE CASCADE,
     quarter_number INT NOT NULL,
     year INT NOT NULL,
     half_yearly_finance_id VARCHAR(20) REFERENCES half_yearly_finances(half_yearly_finance_id),
     total_revenue DECIMAL(15,2) DEFAULT 0,
     platform_commission DECIMAL(15,2) DEFAULT 0,
     net_seller_earnings DECIMAL(15,2) DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (seller_id, admin_id, quarter_number, year)
 );
 
 -- 30. MONTHLY_FINANCES Table
 CREATE TABLE IF NOT EXISTS monthly_finances (
     monthly_finance_id VARCHAR(20) PRIMARY KEY,
     seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+    admin_id VARCHAR(20) REFERENCES admins(admin_id) ON DELETE CASCADE,
     month_number INT NOT NULL,
     year INT NOT NULL,
     quarterly_finance_id VARCHAR(20) REFERENCES quarterly_finances(quarterly_finance_id),
     total_revenue DECIMAL(15,2) DEFAULT 0,
     platform_commission DECIMAL(15,2) DEFAULT 0,
     net_seller_earnings DECIMAL(15,2) DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (seller_id, admin_id, month_number, year)
 );
 
 -- 31. WEEKLY_FINANCES Table
 CREATE TABLE IF NOT EXISTS weekly_finances (
     weekly_finance_id VARCHAR(20) PRIMARY KEY,
     seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+    admin_id VARCHAR(20) REFERENCES admins(admin_id) ON DELETE CASCADE,
     week_number INT NOT NULL,
     year INT NOT NULL,
     total_revenue DECIMAL(15,2) DEFAULT 0,
     platform_commission DECIMAL(15,2) DEFAULT 0,
     net_seller_earnings DECIMAL(15,2) DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (seller_id, admin_id, week_number, year)
 );
 
 -- 32. DAILY_FINANCES Table
 CREATE TABLE IF NOT EXISTS daily_finances (
     daily_finance_id VARCHAR(20) PRIMARY KEY,
     seller_id VARCHAR(20) REFERENCES sellers(seller_id) ON DELETE CASCADE,
+    admin_id VARCHAR(20) REFERENCES admins(admin_id) ON DELETE CASCADE,
     date DATE NOT NULL,
     weekly_finance_id VARCHAR(20) REFERENCES weekly_finances(weekly_finance_id),
     monthly_finance_id VARCHAR(20) REFERENCES monthly_finances(monthly_finance_id),
     total_revenue DECIMAL(15,2) DEFAULT 0,
     platform_commission DECIMAL(15,2) DEFAULT 0,
     net_seller_earnings DECIMAL(15,2) DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (seller_id, admin_id, date)
 );
 
 -- 33. SELLER_PAYOUTS Table
@@ -766,9 +853,161 @@ CREATE TABLE IF NOT EXISTS finance_transactions (
     order_id VARCHAR(20) REFERENCES orders(order_id),
     payment_id VARCHAR(20) REFERENCES payments(payment_id),
     seller_payout_id VARCHAR(20) REFERENCES seller_payouts(seller_payout_id),
+    admin_id VARCHAR(20) REFERENCES admins(admin_id),
     transaction_type finance_transaction_type NOT NULL,
     amount DECIMAL(15,2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 35. SHIPROCKET_ORDERS Table
+CREATE TABLE IF NOT EXISTS shiprocket_orders (
+    sr_order_id VARCHAR(20) PRIMARY KEY,
+    order_id VARCHAR(20) REFERENCES orders(order_id) ON DELETE CASCADE,
+    payment_id VARCHAR(20) REFERENCES payments(payment_id),
+    channel_order_id VARCHAR(100),
+    awb_code VARCHAR(100),
+    shipment_id VARCHAR(100),
+    courier_id VARCHAR(100),
+    courier_name VARCHAR(255),
+    pickup_location VARCHAR(255),
+    sr_status VARCHAR(50),
+    sr_status_code INT,
+    sr_created_at TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 36. SHIPROCKET_PAYLOAD Table
+CREATE TABLE IF NOT EXISTS shiprocket_payload (
+    payload_id VARCHAR(20) PRIMARY KEY,
+    sr_order_id VARCHAR(20) REFERENCES shiprocket_orders(sr_order_id) ON DELETE CASCADE,
+    product_id VARCHAR(20) REFERENCES products(product_id),
+    order_item_id VARCHAR(20) REFERENCES order_items(order_item_id),
+    product_name_snapshot TEXT,
+    sku_snapshot VARCHAR(100),
+    quantity INT,
+    weight_kg DECIMAL(10,3),
+    length_cm DECIMAL(10,2),
+    breadth_cm DECIMAL(10,2),
+    height_cm DECIMAL(10,2),
+    unit_price DECIMAL(10,2),
+    total_price DECIMAL(10,2),
+    hsn_code VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 37. SHIPROCKET_TRACKING Table
+CREATE TABLE IF NOT EXISTS shiprocket_tracking (
+    tracking_id VARCHAR(20) PRIMARY KEY,
+    sr_order_id VARCHAR(20) REFERENCES shiprocket_orders(sr_order_id) ON DELETE CASCADE,
+    awb_code VARCHAR(100),
+    current_status VARCHAR(50),
+    current_location VARCHAR(255),
+    estimated_delivery DATE,
+    activity_log JSONB,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 38. SHIPROCKET_WEBHOOK_LOG Table
+CREATE TABLE IF NOT EXISTS shiprocket_webhook_log (
+    webhook_id VARCHAR(20) PRIMARY KEY,
+    sr_order_id VARCHAR(20),
+    event_type VARCHAR(100),
+    raw_payload JSONB,
+    is_processed BOOLEAN DEFAULT FALSE,
+    error_message TEXT,
+    received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP
+);
+
+-- 39. DELIVERIES Table
+CREATE TABLE IF NOT EXISTS deliveries (
+    delivery_id VARCHAR(20) PRIMARY KEY,
+    order_id VARCHAR(20) REFERENCES orders(order_id) ON DELETE CASCADE,
+    order_item_id VARCHAR(20) REFERENCES order_items(order_item_id),
+    seller_id VARCHAR(20) REFERENCES sellers(seller_id),
+    address_id VARCHAR(20) REFERENCES addresses(address_id),
+    pickup_location_id VARCHAR(20) REFERENCES seller_pickup_locations(pickup_id),
+    processed_webhook_id VARCHAR(20) REFERENCES shiprocket_webhook_log(webhook_id),
+    shipping_address_snapshot JSONB,
+    shiprocket_order_id VARCHAR(100),
+    shipment_id VARCHAR(100),
+    awb_code VARCHAR(100),
+    courier_name VARCHAR(100),
+    shipping_status VARCHAR(50),
+    estimated_delivery_date DATE,
+    dispatched_at TIMESTAMP,
+    delivered_at TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 40. RETURN_REQUESTS Table
+CREATE TABLE IF NOT EXISTS return_requests (
+    return_request_id VARCHAR(20) PRIMARY KEY,
+    order_item_id VARCHAR(20) REFERENCES order_items(order_item_id) ON DELETE CASCADE,
+    customer_id VARCHAR(20) REFERENCES customers(customer_id),
+    order_id VARCHAR(20) REFERENCES orders(order_id),
+    resolved_by_admin_id VARCHAR(20) REFERENCES admins(admin_id),
+    reason TEXT,
+    return_type VARCHAR(50), -- 'Return', 'Exchange'
+    refund_amount DECIMAL(10,2),
+    refund_status VARCHAR(50) DEFAULT 'Pending',
+    resolution_note TEXT,
+    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMP
+);
+
+-- 41. REVERSE_SHIPMENTS Table
+CREATE TABLE IF NOT EXISTS reverse_shipments (
+    reverse_id VARCHAR(20) PRIMARY KEY,
+    return_request_id VARCHAR(20) REFERENCES return_requests(return_request_id) ON DELETE CASCADE,
+    order_item_id VARCHAR(20) REFERENCES order_items(order_item_id),
+    seller_id VARCHAR(20) REFERENCES sellers(seller_id),
+    customer_id VARCHAR(20) REFERENCES customers(customer_id),
+    pickup_address_id VARCHAR(20) REFERENCES addresses(address_id),
+    dropoff_pickup_location_id VARCHAR(20) REFERENCES seller_pickup_locations(pickup_id),
+    shiprocket_reverse_order_id VARCHAR(100),
+    reverse_awb_code VARCHAR(100),
+    status VARCHAR(50),
+    initiated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    delivered_at TIMESTAMP
+);
+
+-- 42. SELLER_COMMISSIONS Table
+CREATE TABLE IF NOT EXISTS seller_commissions (
+    commission_id VARCHAR(20) PRIMARY KEY,
+    order_item_id VARCHAR(20) REFERENCES order_items(order_item_id) ON DELETE CASCADE,
+    seller_id VARCHAR(20) REFERENCES sellers(seller_id),
+    order_id VARCHAR(20) REFERENCES orders(order_id),
+    sale_amount DECIMAL(10,2),
+    commission_rate DECIMAL(5,2),
+    commission_amount DECIMAL(10,2),
+    seller_earnings DECIMAL(10,2),
+    status VARCHAR(50) DEFAULT 'Pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 43. AUDIT_LOGS Table
+CREATE TABLE IF NOT EXISTS audit_logs (
+    audit_id VARCHAR(20) PRIMARY KEY,
+    admin_id VARCHAR(20) REFERENCES admins(admin_id),
+    table_name VARCHAR(100),
+    record_id VARCHAR(100),
+    action VARCHAR(50),
+    old_values JSONB,
+    new_values JSONB,
+    ip_address VARCHAR(45),
+    user_agent VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 44. ORDER_STATUS_HISTORY Table
+CREATE TABLE IF NOT EXISTS order_status_history (
+    history_id VARCHAR(20) PRIMARY KEY,
+    order_id VARCHAR(20) REFERENCES orders(order_id) ON DELETE CASCADE,
+    status VARCHAR(50),
+    changed_by VARCHAR(255),
+    notes TEXT,
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ==========================================
@@ -883,6 +1122,36 @@ CREATE TRIGGER trigger_format_seller_kyc_id BEFORE INSERT ON seller_kyc FOR EACH
 DROP TRIGGER IF EXISTS trigger_format_seller_agreements_id ON seller_agreements;
 CREATE TRIGGER trigger_format_seller_agreements_id BEFORE INSERT ON seller_agreements FOR EACH ROW EXECUTE FUNCTION format_seller_agreement_id();
 
+DROP TRIGGER IF EXISTS trigger_format_shiprocket_orders_id ON shiprocket_orders;
+CREATE TRIGGER trigger_format_shiprocket_orders_id BEFORE INSERT ON shiprocket_orders FOR EACH ROW EXECUTE FUNCTION format_shiprocket_order_id();
+
+DROP TRIGGER IF EXISTS trigger_format_shiprocket_payload_id ON shiprocket_payload;
+CREATE TRIGGER trigger_format_shiprocket_payload_id BEFORE INSERT ON shiprocket_payload FOR EACH ROW EXECUTE FUNCTION format_shiprocket_payload_id();
+
+DROP TRIGGER IF EXISTS trigger_format_shiprocket_tracking_id ON shiprocket_tracking;
+CREATE TRIGGER trigger_format_shiprocket_tracking_id BEFORE INSERT ON shiprocket_tracking FOR EACH ROW EXECUTE FUNCTION format_shiprocket_tracking_id();
+
+DROP TRIGGER IF EXISTS trigger_format_shiprocket_webhook_id ON shiprocket_webhook_log;
+CREATE TRIGGER trigger_format_shiprocket_webhook_id BEFORE INSERT ON shiprocket_webhook_log FOR EACH ROW EXECUTE FUNCTION format_shiprocket_webhook_id();
+
+DROP TRIGGER IF EXISTS trigger_format_deliveries_id ON deliveries;
+CREATE TRIGGER trigger_format_deliveries_id BEFORE INSERT ON deliveries FOR EACH ROW EXECUTE FUNCTION format_delivery_id();
+
+DROP TRIGGER IF EXISTS trigger_format_reverse_shipments_id ON reverse_shipments;
+CREATE TRIGGER trigger_format_reverse_shipments_id BEFORE INSERT ON reverse_shipments FOR EACH ROW EXECUTE FUNCTION format_reverse_id();
+
+DROP TRIGGER IF EXISTS trigger_format_return_requests_id ON return_requests;
+CREATE TRIGGER trigger_format_return_requests_id BEFORE INSERT ON return_requests FOR EACH ROW EXECUTE FUNCTION format_return_request_id();
+
+DROP TRIGGER IF EXISTS trigger_format_seller_commissions_id ON seller_commissions;
+CREATE TRIGGER trigger_format_seller_commissions_id BEFORE INSERT ON seller_commissions FOR EACH ROW EXECUTE FUNCTION format_commission_id();
+
+DROP TRIGGER IF EXISTS trigger_format_audit_logs_id ON audit_logs;
+CREATE TRIGGER trigger_format_audit_logs_id BEFORE INSERT ON audit_logs FOR EACH ROW EXECUTE FUNCTION format_audit_id();
+
+DROP TRIGGER IF EXISTS trigger_format_order_status_history_id ON order_status_history;
+CREATE TRIGGER trigger_format_order_status_history_id BEFORE INSERT ON order_status_history FOR EACH ROW EXECUTE FUNCTION format_order_status_history_id();
+
 -- Triggers for updated_at
 DROP TRIGGER IF EXISTS trigger_update_customer_updated_at ON customers;
 CREATE TRIGGER trigger_update_customer_updated_at BEFORE UPDATE ON customers FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -911,6 +1180,100 @@ CREATE TRIGGER trigger_update_order_item_updated_at BEFORE UPDATE ON order_items
 DROP TRIGGER IF EXISTS trigger_update_payment_updated_at ON payments;
 CREATE TRIGGER trigger_update_payment_updated_at BEFORE UPDATE ON payments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trigger_update_shiprocket_order_updated_at ON shiprocket_orders;
+CREATE TRIGGER trigger_update_shiprocket_order_updated_at BEFORE UPDATE ON shiprocket_orders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trigger_update_shiprocket_tracking_updated_at ON shiprocket_tracking;
+CREATE TRIGGER trigger_update_shiprocket_tracking_updated_at BEFORE UPDATE ON shiprocket_tracking FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trigger_update_delivery_updated_at ON deliveries;
+CREATE TRIGGER trigger_update_delivery_updated_at BEFORE UPDATE ON deliveries FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ==========================================
+-- FINANCIAL AGGREGATION LOGIC
+-- ==========================================
+
+CREATE OR REPLACE FUNCTION update_financial_aggregates()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_date DATE;
+    v_week INT;
+    v_month INT;
+    v_quarter INT;
+    v_half INT;
+    v_year INT;
+    v_commission DECIMAL(15,2);
+    v_earnings DECIMAL(15,2);
+BEGIN
+    -- Get time components
+    v_date := CURRENT_DATE;
+    v_week := EXTRACT(WEEK FROM v_date);
+    v_month := EXTRACT(MONTH FROM v_date);
+    v_quarter := EXTRACT(QUARTER FROM v_date);
+    v_half := CASE WHEN v_month <= 6 THEN 1 ELSE 2 END;
+    v_year := EXTRACT(YEAR FROM v_date);
+
+    -- Calculate Commission (Default 10% for sellers, 0% for admin) and Earnings
+    IF NEW.admin_id IS NOT NULL THEN
+        v_commission := 0;
+        v_earnings := NEW.seller_subtotal;
+    ELSE
+        v_commission := NEW.seller_subtotal * 0.10;
+        v_earnings := NEW.seller_subtotal - v_commission;
+    END IF;
+
+    -- 1. Update Daily Finances
+    INSERT INTO daily_finances (seller_id, admin_id, date, total_revenue, platform_commission, net_seller_earnings)
+    VALUES (NEW.seller_id, NEW.admin_id, v_date, NEW.seller_subtotal, v_commission, v_earnings)
+    ON CONFLICT (seller_id, admin_id, date) 
+    DO UPDATE SET 
+        total_revenue = daily_finances.total_revenue + EXCLUDED.total_revenue,
+        platform_commission = daily_finances.platform_commission + EXCLUDED.platform_commission,
+        net_seller_earnings = daily_finances.net_seller_earnings + EXCLUDED.net_seller_earnings;
+
+    -- 2. Update Weekly Finances
+    INSERT INTO weekly_finances (seller_id, admin_id, week_number, year, total_revenue, platform_commission, net_seller_earnings)
+    VALUES (NEW.seller_id, NEW.admin_id, v_week, v_year, NEW.seller_subtotal, v_commission, v_earnings)
+    ON CONFLICT (seller_id, admin_id, week_number, year) 
+    DO UPDATE SET 
+        total_revenue = weekly_finances.total_revenue + EXCLUDED.total_revenue,
+        platform_commission = weekly_finances.platform_commission + EXCLUDED.platform_commission,
+        net_seller_earnings = weekly_finances.net_seller_earnings + EXCLUDED.net_seller_earnings;
+
+    -- 3. Update Monthly Finances
+    INSERT INTO monthly_finances (seller_id, admin_id, month_number, year, total_revenue, platform_commission, net_seller_earnings)
+    VALUES (NEW.seller_id, NEW.admin_id, v_month, v_year, NEW.seller_subtotal, v_commission, v_earnings)
+    ON CONFLICT (seller_id, admin_id, month_number, year) 
+    DO UPDATE SET 
+        total_revenue = monthly_finances.total_revenue + EXCLUDED.total_revenue,
+        platform_commission = monthly_finances.platform_commission + EXCLUDED.platform_commission,
+        net_seller_earnings = monthly_finances.net_seller_earnings + EXCLUDED.net_seller_earnings;
+
+    -- 4. Update Quarterly Finances
+    INSERT INTO quarterly_finances (seller_id, admin_id, quarter_number, year, total_revenue, platform_commission, net_seller_earnings)
+    VALUES (NEW.seller_id, NEW.admin_id, v_quarter, v_year, NEW.seller_subtotal, v_commission, v_earnings)
+    ON CONFLICT (seller_id, admin_id, quarter_number, year) 
+    DO UPDATE SET 
+        total_revenue = quarterly_finances.total_revenue + EXCLUDED.total_revenue,
+        platform_commission = quarterly_finances.platform_commission + EXCLUDED.platform_commission,
+        net_seller_earnings = quarterly_finances.net_seller_earnings + EXCLUDED.net_seller_earnings;
+
+    -- 5. Update Annual Finances
+    INSERT INTO annual_finances (seller_id, admin_id, year, total_revenue, platform_commission, net_seller_earnings)
+    VALUES (NEW.seller_id, NEW.admin_id, v_year, NEW.seller_subtotal, v_commission, v_earnings)
+    ON CONFLICT (seller_id, admin_id, year) 
+    DO UPDATE SET 
+        total_revenue = annual_finances.total_revenue + EXCLUDED.total_revenue,
+        platform_commission = annual_finances.platform_commission + EXCLUDED.platform_commission,
+        net_seller_earnings = annual_finances.net_seller_earnings + EXCLUDED.net_seller_earnings;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_update_finances ON order_sellers;
+CREATE TRIGGER trigger_update_finances AFTER INSERT ON order_sellers FOR EACH ROW EXECUTE FUNCTION update_financial_aggregates();
+
 -- ==========================================
 -- SCHEMA MIGRATIONS (Ensure new columns exist)
 -- ==========================================
@@ -919,3 +1282,4 @@ ALTER TABLE sellers ADD COLUMN IF NOT EXISTS return_address TEXT;
 ALTER TABLE sellers ADD COLUMN IF NOT EXISTS instagram_url TEXT;
 ALTER TABLE sellers ADD COLUMN IF NOT EXISTS facebook_url TEXT;
 ALTER TABLE sellers ADD COLUMN IF NOT EXISTS twitter_url TEXT;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS admin_id VARCHAR(20) REFERENCES admins(admin_id) ON DELETE CASCADE;

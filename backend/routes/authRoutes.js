@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const pool = require('../config/db');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const { createNotification } = require('../lib/notifications');
 
 // SEND OTP
 router.post('/send-otp', async (req, res) => {
@@ -132,6 +133,17 @@ router.post('/signup', async (req, res) => {
 
     const token = jwt.sign({ id: userId, role }, process.env.JWT_SECRET, { expiresIn: '7d' });
     const userObj = { id: userId, name, email, role, phone, storeName, address, onboardingDone: false };
+
+    // --- DYNAMIC NOTIFICATIONS ---
+    if (role === 'buyer' || role === 'seller') {
+      await createNotification({
+        adminId: 'ADM001',
+        type: 'info',
+        title: `New ${role === 'buyer' ? 'Customer' : 'Seller'} Joined`,
+        message: `${name} has registered as a ${role === 'buyer' ? 'customer' : 'seller'}.`
+      });
+    }
+    // ----------------------------
 
     // Record session
     await recordSession(userObj, req, token);

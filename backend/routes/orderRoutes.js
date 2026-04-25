@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
+const { createNotification } = require('../lib/notifications');
 
 // Helper to fetch a single detailed order
 const fetchDetailedOrder = async (orderId) => {
@@ -137,33 +138,64 @@ router.post('/', async (req, res) => {
 
     // 2. Insert items into order_items table
     const sellerTotals = {};
+    const adminTotals = {};
 
     for (const item of items) {
       // Small check to ensure we have product data
       if (!item.productId) continue;
 
+      // Fetch product details to get admin_id if seller_id is null
+      const productRes = await client.query('SELECT seller_id, admin_id, name, stock_quantity FROM products WHERE product_id = $1', [item.productId]);
+      if (productRes.rows.length === 0) throw new Error(`Product ${item.productId} not found.`);
+      const p = productRes.rows[0];
+
       const itemQuery = `
         INSERT INTO order_items (
-          order_id, product_id, variant_id, seller_id, 
+          order_id, product_id, variant_id, seller_id, admin_id,
           quantity, unit_price, total_price, item_status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'Processing')
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Processing')
       `;
       const itemTotal = Number(item.totalPrice) || (Number(item.unitPrice) * Number(item.quantity || 1)) || 0;
       
-      if (item.sellerId) {
-        sellerTotals[item.sellerId] = (sellerTotals[item.sellerId] || 0) + itemTotal;
+      const itemSellerId = p.seller_id || item.sellerId || null;
+      const itemAdminId = p.admin_id || null;
+
+      if (itemSellerId) {
+        sellerTotals[itemSellerId] = (sellerTotals[itemSellerId] || 0) + itemTotal;
+      } else if (itemAdminId) {
+        adminTotals[itemAdminId] = (adminTotals[itemAdminId] || 0) + itemTotal;
       }
       
       const itemValues = [
         newOrder.order_id, 
         item.productId, 
         item.variantId || null, 
-        item.sellerId || null,
+        itemSellerId,
+        itemAdminId,
         item.quantity || 1, 
         Number(item.unitPrice) || 0, 
         itemTotal
       ];
       await client.query(itemQuery, itemValues);
+
+      // Check for low stock and notify seller/admin
+      if (p.stock_quantity <= 10) {
+        if (p.seller_id) {
+          await createNotification({
+            sellerId: p.seller_id,
+            type: 'warning',
+            title: 'Low Stock Alert',
+            message: `Product "${p.name}" has only ${p.stock_quantity} units left in stock.`
+          });
+        } else if (p.admin_id) {
+          await createNotification({
+            adminId: p.admin_id,
+            type: 'warning',
+            title: 'Low Stock Alert',
+            message: `Platform product "${p.name}" has only ${p.stock_quantity} units left in stock.`
+          });
+        }
+      }
     }
 
     // Insert into order_sellers
@@ -171,6 +203,14 @@ router.post('/', async (req, res) => {
       await client.query(
         'INSERT INTO order_sellers (order_id, seller_id, seller_subtotal) VALUES ($1, $2, $3)',
         [newOrder.order_id, sellerId, subtotal]
+      );
+    }
+
+    // Insert into order_sellers for Admin records as well
+    for (const [adminId, subtotal] of Object.entries(adminTotals)) {
+      await client.query(
+        'INSERT INTO order_sellers (order_id, admin_id, seller_subtotal) VALUES ($1, $2, $3)',
+        [newOrder.order_id, adminId, subtotal]
       );
     }
 
@@ -209,6 +249,39 @@ router.post('/', async (req, res) => {
 
     await client.query('COMMIT');
     console.log(`✅ Order ${newOrder.order_id} created successfully.`);
+    
+    // --- DYNAMIC NOTIFICATIONS ---
+    // 1. Notify Admin about new global order
+    await createNotification({
+      adminId: 'ADM001', // Defaulting to ADM001 for now, or fetch active admins
+      orderId: newOrder.order_id,
+      type: 'info',
+      title: 'New Global Order',
+      message: `A new order ${newOrder.order_id} has been placed for ₹${newOrder.total_amount}.`
+    });
+
+    // 2. Notify each involved Seller
+    for (const [sellerId, subtotal] of Object.entries(sellerTotals)) {
+      await createNotification({
+        sellerId,
+        orderId: newOrder.order_id,
+        type: 'success',
+        title: 'New Order Received',
+        message: `You have received a new order ${newOrder.order_id} worth ₹${subtotal}.`
+      });
+    }
+
+    // 3. Notify Customer
+    if (customerId) {
+      await createNotification({
+        customerId,
+        orderId: newOrder.order_id,
+        type: 'success',
+        title: 'Order Placed Successfully',
+        message: `Your order ${newOrder.order_id} has been placed and is being processed.`
+      });
+    }
+    // ----------------------------
     
     // Fetch detailed order for response
     const detailedOrder = await fetchDetailedOrder(newOrder.order_id);
@@ -294,7 +367,38 @@ router.put('/:orderId/status', async (req, res) => {
       }
 
       await client.query('COMMIT');
+      
+      // --- DYNAMIC NOTIFICATIONS ---
       const detailedOrder = await fetchDetailedOrder(orderId);
+
+      // Notify Customer about status change
+      if (detailedOrder.customer_id) {
+        await createNotification({
+          customerId: detailedOrder.customer_id,
+          orderId,
+          type: status === 'Delivered' ? 'success' : status === 'Cancelled' ? 'error' : 'info',
+          title: `Order Status: ${status}`,
+          message: `Your order ${orderId} status has been updated to ${status}.`
+        });
+      }
+
+      // Notify Sellers if it was cancelled
+      if (status === 'Cancelled') {
+        const sellers = await client.query('SELECT DISTINCT seller_id FROM order_items WHERE order_id = $1', [orderId]);
+        for (const s of sellers.rows) {
+          if (s.seller_id) {
+            await createNotification({
+              sellerId: s.seller_id,
+              orderId,
+              type: 'error',
+              title: 'Order Cancelled',
+              message: `Order ${orderId} has been cancelled by the customer/admin.`
+            });
+          }
+        }
+      }
+      // ----------------------------
+      
       res.json(detailedOrder);
     } catch (err) {
       await client.query('ROLLBACK');

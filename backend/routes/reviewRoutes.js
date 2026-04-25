@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
+const { createNotification } = require('../lib/notifications');
 
 // GET reviews for a product
 router.get('/product/:productId', async (req, res) => {
@@ -65,10 +66,24 @@ router.post('/', async (req, res) => {
       RETURNING *
     `;
     const result = await pool.query(query, [orderItemId || null, customerId, productId, rating, title, body]);
+    const newReview = result.rows[0];
+
+    // Notify Seller about the new review
+    try {
+      const productRes = await pool.query('SELECT name, seller_id FROM products WHERE product_id = $1', [productId]);
+      if (productRes.rows.length > 0 && productRes.rows[0].seller_id) {
+        await createNotification({
+          sellerId: productRes.rows[0].seller_id,
+          type: 'info',
+          title: 'New Product Review',
+          message: `Customer left a ${rating}-star review for "${productRes.rows[0].name}": "${title}"`
+        });
+      }
+    } catch (notifErr) {
+      console.error('Failed to send review notification:', notifErr);
+    }
     
-    // Optional: Update product rating average (could be a trigger or manual update)
-    
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(newReview);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to submit review' });

@@ -146,6 +146,101 @@ router.get('/admin/stats', async (req, res) => {
   }
 });
 
+// GET ADMIN REPORTS DATA
+router.get('/admin/reports', async (req, res) => {
+  try {
+    // 1. KPI Stats (Current Quarter)
+    const kpiQuery = `
+      SELECT 
+        COALESCE(SUM(total_amount), 0) as "totalSales",
+        COUNT(order_id) as "totalOrders",
+        COALESCE(AVG(total_amount), 0) as "avgOrderValue",
+        (SELECT COUNT(DISTINCT customer_id) FROM orders) as "activeCustomers"
+      FROM orders
+      WHERE placed_at >= date_trunc('quarter', CURRENT_DATE)
+    `;
+    const kpiRes = await pool.query(kpiQuery);
+
+    // 2. Revenue Trend (Last 9 Months)
+    const trendQuery = `
+      SELECT 
+        TO_CHAR(placed_at, 'Mon') as month, 
+        SUM(total_amount) as revenue, 
+        COUNT(order_id) as orders
+      FROM orders
+      WHERE placed_at >= CURRENT_DATE - INTERVAL '9 months'
+      GROUP BY TO_CHAR(placed_at, 'Mon'), date_trunc('month', placed_at)
+      ORDER BY date_trunc('month', placed_at)
+    `;
+    const trendRes = await pool.query(trendQuery);
+
+    // 3. Seller Comparison (Top 5 Sellers in current Quarter)
+    const sellerQuery = `
+      SELECT 
+        COALESCE(s.store_name, 'Platform') as seller,
+        SUM(CASE WHEN EXTRACT(MONTH FROM o.placed_at) = EXTRACT(MONTH FROM CURRENT_DATE - INTERVAL '2 months') THEN oi.total_price ELSE 0 END) as month1,
+        SUM(CASE WHEN EXTRACT(MONTH FROM o.placed_at) = EXTRACT(MONTH FROM CURRENT_DATE - INTERVAL '1 month') THEN oi.total_price ELSE 0 END) as month2,
+        SUM(CASE WHEN EXTRACT(MONTH FROM o.placed_at) = EXTRACT(MONTH FROM CURRENT_DATE) THEN oi.total_price ELSE 0 END) as month3
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.order_id
+      LEFT JOIN sellers s ON oi.seller_id = s.seller_id
+      WHERE o.placed_at >= date_trunc('quarter', CURRENT_DATE)
+      GROUP BY COALESCE(s.store_name, 'Platform')
+      ORDER BY SUM(oi.total_price) DESC
+      LIMIT 5
+    `;
+    const sellerRes = await pool.query(sellerQuery);
+
+    // 4. Top Selling Products
+    const productsQuery = `
+      SELECT 
+        p.name as item,
+        COALESCE(s.store_name, 'Platform') as seller,
+        SUM(oi.quantity) as qty,
+        SUM(oi.total_price) as value,
+        '+15%' as growth -- Simplified growth for demo
+      FROM order_items oi
+      JOIN products p ON oi.product_id = p.product_id
+      LEFT JOIN sellers s ON oi.seller_id = s.seller_id
+      GROUP BY p.name, COALESCE(s.store_name, 'Platform')
+      ORDER BY qty DESC
+      LIMIT 6
+    `;
+    const productsRes = await pool.query(productsQuery);
+
+    // 5. All Orders for Modal Reports
+    const ordersQuery = `
+      SELECT 
+        o.order_id as "orderId",
+        p.name as product,
+        oi.quantity as qty,
+        oi.total_price as revenue,
+        COALESCE(o.discount_amount / NULLIF((SELECT COUNT(*) FROM order_items WHERE order_id = o.order_id), 0), 0) as discount,
+        o.payment_method as payment,
+        o.payment_status as status,
+        COALESCE(o.tax_amount / NULLIF((SELECT COUNT(*) FROM order_items WHERE order_id = o.order_id), 0), 0) as gst,
+        o.placed_at
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.order_id
+      JOIN products p ON oi.product_id = p.product_id
+      ORDER BY o.placed_at DESC
+      LIMIT 100
+    `;
+    const ordersRes = await pool.query(ordersQuery);
+
+    res.json({
+      kpis: kpiRes.rows[0],
+      revenueTrend: trendRes.rows,
+      sellerComparison: sellerRes.rows,
+      topProducts: productsRes.rows,
+      allOrders: ordersRes.rows
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to fetch admin reports' });
+  }
+});
+
 // GET ADMIN TRANSACTIONS
 router.get('/admin/transactions', async (req, res) => {
   try {
@@ -153,13 +248,12 @@ router.get('/admin/transactions', async (req, res) => {
       SELECT 
         ft.finance_transaction_id as id,
         ft.transaction_type as type,
-        s.store_name as seller,
+        COALESCE(s.store_name, 'Platform') as seller,
         ft.amount,
         ft.created_at as date,
         'Completed' as status
       FROM finance_transactions ft
-      LEFT JOIN daily_finances df ON ft.daily_finance_id = df.daily_finance_id
-      LEFT JOIN sellers s ON df.seller_id = s.seller_id
+      LEFT JOIN sellers s ON ft.seller_id = s.seller_id
       ORDER BY ft.created_at DESC
       LIMIT 100
     `;
@@ -223,7 +317,18 @@ router.post('/admin/payouts/:id/complete', async (req, res) => {
       [id]
     );
     if (result.rows.length === 0) return res.status(404).json({ message: 'Payout not found' });
-    res.json(result.rows[0]);
+    
+    const payout = result.rows[0];
+    
+    // Notify Seller about processed payout
+    await createNotification({
+      sellerId: payout.seller_id,
+      type: 'success',
+      title: 'Payout Processed',
+      message: `Your payout request for ₹${payout.amount} (${payout.seller_payout_id}) has been processed successfully.`
+    });
+
+    res.json(payout);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to update payout' });
@@ -311,10 +416,44 @@ router.get('/seller/:sellerId/analytics', async (req, res) => {
       color: ['#10B981', '#34D399', '#f59e0b', '#f97316', '#64748b'][i % 5]
     }));
 
+    // 4. Top Selling Products for this Seller
+    const topProductsQuery = `
+      SELECT 
+        p.name as item,
+        SUM(oi.quantity) as qty,
+        SUM(oi.total_price) as revenue
+      FROM order_items oi
+      JOIN products p ON oi.product_id = p.product_id
+      JOIN payments py ON oi.order_id = py.order_id
+      WHERE oi.seller_id = $1 AND py.payment_status = 'Completed'
+      GROUP BY p.name
+      ORDER BY revenue DESC
+      LIMIT 5
+    `;
+    const topProductsRes = await pool.query(topProductsQuery, [sellerId]);
+
+    // 5. Monthly Revenue Trend (for growth calculation)
+    const growthQuery = `
+      SELECT 
+        TO_CHAR(date, 'Mon') as month,
+        SUM(total_revenue) as revenue
+      FROM daily_finances
+      WHERE seller_id = $1 AND date >= date_trunc('month', CURRENT_DATE - INTERVAL '1 month')
+      GROUP BY TO_CHAR(date, 'Mon'), date_trunc('month', date)
+      ORDER BY date_trunc('month', date)
+    `;
+    const growthRes = await pool.query(growthQuery, [sellerId]);
+
     res.json({
-      stats: statsRes.rows[0],
+      stats: {
+        ...statsRes.rows[0],
+        totalOrders: parseInt(statsRes.rows[0].totalOrders || 0),
+        avgOrderValue: statsRes.rows[0].totalOrders > 0 ? (statsRes.rows[0].totalRevenue / statsRes.rows[0].totalOrders) : 0
+      },
       trend: trendRes.rows,
-      categories: categoryBreakdown
+      categories: categoryBreakdown,
+      topProducts: topProductsRes.rows,
+      growth: growthRes.rows
     });
   } catch (err) {
     console.error(err);

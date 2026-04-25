@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
+const { createNotification } = require('../lib/notifications');
 
 // GET BANK ACCOUNT
 router.get('/bank/:sellerId', async (req, res) => {
@@ -90,6 +91,15 @@ router.post('/onboarding', async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    // Notify Admin about new onboarding completion
+    await createNotification({
+      adminId: 'ADM001',
+      type: 'warning',
+      title: 'New Seller Onboarding',
+      message: `Seller ${store.storeName} (${sellerId}) has completed onboarding and is awaiting verification.`
+    });
+
     res.json({ message: 'Onboarding data saved successfully' });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -97,6 +107,60 @@ router.post('/onboarding', async (req, res) => {
     res.status(500).json({ message: 'Onboarding failed' });
   } finally {
     client.release();
+  }
+});
+
+// VERIFY/APPROVE SELLER (Admin)
+router.post('/:sellerId/verify', async (req, res) => {
+  const { sellerId } = req.params;
+  const { approvedBy } = req.body; // adminId
+
+  try {
+    await pool.query(
+      'UPDATE sellers SET is_verified = TRUE, approved_by_admin_id = $1, updated_at = CURRENT_TIMESTAMP WHERE seller_id = $2',
+      [approvedBy, sellerId]
+    );
+
+    // Notify Seller
+    await createNotification({
+      sellerId,
+      type: 'success',
+      title: 'Store Verified!',
+      message: 'Your store has been verified by the admin. You can now start selling products.'
+    });
+
+    res.json({ message: 'Seller verified successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to verify seller' });
+  }
+});
+
+// UPDATE KYC STATUS (Admin)
+router.post('/:sellerId/kyc/status', async (req, res) => {
+  const { sellerId } = req.params;
+  const { status, note } = req.body; // 'Approved', 'Rejected'
+
+  try {
+    await pool.query(
+      'UPDATE seller_kyc SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE seller_id = $2',
+      [status, sellerId]
+    );
+
+    // Notify Seller
+    await createNotification({
+      sellerId,
+      type: status === 'Approved' ? 'success' : 'error',
+      title: `KYC ${status}`,
+      message: status === 'Approved' 
+        ? 'Your KYC documents have been approved.' 
+        : `Your KYC documents were rejected. Reason: ${note || 'Please re-upload valid documents.'}`
+    });
+
+    res.json({ message: `KYC ${status} successfully` });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to update KYC status' });
   }
 });
 

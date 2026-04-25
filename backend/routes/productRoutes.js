@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../config/db');
+const { createNotification } = require('../lib/notifications');
 
 let productsColumnsCache = null;
 let productsColumnsCacheAt = 0;
@@ -219,6 +220,16 @@ router.post('/', async (req, res) => {
           [productId, payload.images[i], i === 0, i]
         );
       }
+    }
+
+    // Notify Admin about new product addition (if added by a seller)
+    if (payload.sellerId) {
+      await createNotification({
+        adminId: 'ADM001',
+        type: 'info',
+        title: 'New Product Added',
+        message: `Seller ${payload.sellerId} has added a new product: ${payload.name}.`
+      });
     }
 
     const finalResult = await pool.query(`${GET_PRODUCT_QUERY} WHERE p.product_id = $1`, [productId]);

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   ShoppingBag, Package, FileText, BarChart2, MessageSquare, 
-  Settings, Menu, Search, Sun, Moon, User, LogOut, ChevronDown, CheckCircle, Tag
+  Settings, Menu, Search, Sun, Moon, User, LogOut, ChevronDown, CheckCircle, Tag, Bell, X
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 // import { SELLER } from '../components/shared'; // Removed unused variable
@@ -42,7 +42,49 @@ export default function SellerDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!currentUser?.id) return;
+    try {
+      const res = await fetch(`http://localhost:5000/api/notifications/seller/${currentUser.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data);
+        setUnreadCount(data.filter(n => !n.is_read).length);
+      }
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err);
+    }
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
+  const markAsRead = async (id) => {
+    try {
+      await fetch(`http://localhost:5000/api/notifications/${id}/read`, { method: 'PUT' });
+      fetchNotifications();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const deleteNotification = async (e, id) => {
+    e.stopPropagation();
+    try {
+      await fetch(`http://localhost:5000/api/notifications/${id}`, { method: 'DELETE' });
+      fetchNotifications();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -52,7 +94,7 @@ export default function SellerDashboard() {
     { id: "products", label: "Products", icon: Package, badge: products.length || 0 },
     { id: "orders", label: "Orders", icon: FileText, badge: orders.length || 0 },
     { id: "analytics", label: "Analytics", icon: BarChart2 },
-    { id: "notifications", label: "Messages", icon: MessageSquare, badge: 2 },
+    { id: "notifications", label: "Messages", icon: MessageSquare, badge: unreadCount },
     { id: "payments", label: "Payments", icon: CheckCircle },
     { id: "coupons", label: "Coupons", icon: Tag },
     { id: "reviews", label: "Reviews", icon: ShoppingBag },
@@ -258,6 +300,68 @@ export default function SellerDashboard() {
             <button onClick={() => setDark(p => !p)} className="p-2 rounded-lg bg-transparent border-none text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors">
               {dark ? <Sun size={18} /> : <Moon size={18} />}
             </button>
+
+            <div className="relative">
+              <button onClick={() => { setNotificationsOpen(p => !p); setProfileOpen(false); }} className="p-2 rounded-lg bg-transparent border-none text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer transition-colors relative">
+                <Bell size={18} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900" />
+                )}
+              </button>
+
+              {notificationsOpen && (
+                <div className="absolute right-0 top-[calc(100%+8px)] w-80 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden z-50">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+                    <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">Notifications</h3>
+                    <button onClick={() => setNotificationsOpen(false)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400">
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <div className="max-h-[360px] overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="p-8 text-center text-slate-400 text-xs">No notifications yet</div>
+                    ) : (
+                      notifications.map((notif) => {
+                        const titleMatch = notif.message.match(/\[(.*?)\]/);
+                        const title = titleMatch ? titleMatch[1] : 'Update';
+                        const message = notif.message.replace(/\[.*?\]\s?/, '');
+                        return (
+                          <div 
+                            key={notif.notification_id} 
+                            onClick={() => { markAsRead(notif.notification_id); if (notif.order_id) { setPage('orders'); navigate('/seller/orders'); } setNotificationsOpen(false); }}
+                            className={`px-4 py-3 border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer relative group ${!notif.is_read ? 'bg-emerald-500/[0.03]' : ''}`}
+                          >
+                            <div className="flex gap-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                                notif.type === 'success' ? 'bg-emerald-100 text-emerald-600' 
+                                : notif.type === 'warning' ? 'bg-amber-100 text-amber-600' 
+                                : notif.type === 'error' ? 'bg-red-100 text-red-600' 
+                                : 'bg-blue-100 text-blue-600'
+                              }`}>
+                                <Bell size={14} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-[12px] font-bold ${!notif.is_read ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'}`}>{title}</p>
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2 leading-relaxed">{message}</p>
+                                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 flex items-center gap-1.5">
+                                  {new Date(notif.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                              </div>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); deleteNotification(e, notif.notification_id); }}
+                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-opacity"
+                              >
+                                <X size={12} className="text-slate-400" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="relative">
               <button onClick={() => setProfileOpen(p => !p)} className="flex items-center gap-2 p-1 pr-3 rounded-full bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-emerald-500/30 dark:hover:border-emerald-500/30 cursor-pointer transition-all">

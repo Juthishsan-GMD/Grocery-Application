@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { StatCard } from "../../admin/components/StatCard";
 import {
   FileBarChart, TrendingUp, ShoppingCart, Users, Search,
@@ -10,57 +10,8 @@ import {
   LineChart, Line, BarChart, Bar, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-
-/* ─── chart data ───────────────────────────────────────────────── */
-const monthlySales = [
-  { month: "Jul", orders: 3200,  revenue: 485000 },
-  { month: "Aug", orders: 3580,  revenue: 510000 },
-  { month: "Sep", orders: 3400,  revenue: 495000 },
-  { month: "Oct", orders: 3760,  revenue: 548000 },
-  { month: "Nov", orders: 4520,  revenue: 675000 },
-  { month: "Dec", orders: 5800,  revenue: 802000 },
-  { month: "Jan", orders: 3980,  revenue: 568000 },
-  { month: "Feb", orders: 4200,  revenue: 595000 },
-  { month: "Mar", orders: 5100,  revenue: 735000 },
-];
-
-const sellerSales = [
-  { seller: "FreshFarm Organics", jan: 82000,  feb: 91000,  mar: 124000 },
-  { seller: "DairyDirect",       jan: 68000,  feb: 74000,  mar: 89000  },
-  { seller: "BakeHouse",         jan: 52000,  feb: 58000,  mar: 68000  },
-  { seller: "GreenGrocers",      jan: 38000,  feb: 42000,  mar: 46000  },
-  { seller: "NatureBasket",      jan: 22000,  feb: 28000,  mar: 32000  },
-];
-
-const topProducts = [
-  { item: "Organic Tomatoes",  seller: "FreshFarm",    qty: "2,840", value: "₹1,27,800", growth: "+18%" },
-  { item: "Fresh Milk (1L)",   seller: "DairyDirect",  qty: "3,200", value: "₹2,08,000", growth: "+24%" },
-  { item: "Alphonso Mangoes",  seller: "GreenGrocers", qty: "1,850", value: "₹1,57,250", growth: "+12%" },
-  { item: "Free-range Eggs",   seller: "NatureBasket", qty: "4,100", value: "₹61,500",   growth: "+8%"  },
-  { item: "Sourdough Bread",   seller: "BakeHouse",    qty: "1,560", value: "₹1,48,200", growth: "+15%" },
-  { item: "Cold Brew Coffee",  seller: "BrewMaster",   qty: "2,100", value: "₹2,52,000", growth: "+22%" },
-];
-
-/* ─── report row data ───────────────────────────────────────────── */
-const REPORT_ROWS = [
-  { orderId: "ORD-78451", product: "Organic Tomatoes",  qty: 2, revenue: "₹90",    discount: "₹10",  payment: "UPI",    status: "Paid",    gst: "₹4.5" },
-  { orderId: "ORD-78450", product: "Fresh Milk (1L)",   qty: 1, revenue: "₹65",    discount: "₹0",   payment: "Card",   status: "Paid",    gst: "₹3.2" },
-  { orderId: "ORD-78449", product: "Alphonso Mangoes",  qty: 3, revenue: "₹2,550", discount: "₹250", payment: "COD",    status: "Pending", gst: "₹127" },
-  { orderId: "ORD-78448", product: "Free-range Eggs",   qty: 2, revenue: "₹360",   discount: "₹40",  payment: "UPI",    status: "Paid",    gst: "₹18" },
-  { orderId: "ORD-78447", product: "Sourdough Bread",    qty: 1, revenue: "₹95",    discount: "₹5",   payment: "Card",   status: "Refunded","gst": "₹0"  },
-  { orderId: "ORD-78446", product: "Cold Brew Coffee",   qty: 2, revenue: "₹240",   discount: "₹20",  payment: "Wallet", status: "Paid",    gst: "₹12" },
-  { orderId: "ORD-78445", product: "Organic Carrots",   qty: 1, revenue: "₹30",    discount: "₹0",   payment: "UPI",    status: "Paid",    gst: "₹1.5" },
-  { orderId: "ORD-78444", product: "Greek Yogurt",      qty: 4, revenue: "₹840",   discount: "₹80",  payment: "Card",   status: "Paid",    gst: "₹42" },
-];
-
-/* Report configs — what rows are shown per period */
-const REPORT_CONFIGS = {
-  daily:   { label: "Daily Report",   subtitle: "Today — Apr 1, 2026",    rows: REPORT_ROWS.slice(0, 3) },
-  weekly:  { label: "Weekly Report",  subtitle: "Mar 25 – Apr 1, 2026",   rows: REPORT_ROWS.slice(0, 5) },
-  monthly: { label: "Monthly Report", subtitle: "March 2026",             rows: REPORT_ROWS.slice(0, 7) },
-  yearly:  { label: "Yearly Report",  subtitle: "Financial Year 2025–26", rows: REPORT_ROWS },
-  gst:     { label: "GST Invoice Report", subtitle: "April 2026",         rows: REPORT_ROWS },
-};
+import { Skeleton, CustomTooltip } from "../../seller/components/sharedComponents";
+import { fmtShort } from "../../seller/components/shared";
 
 /* ─── CSV download helper ───────────────────────────────────────── */
 function downloadCSV(rows, filename) {
@@ -81,20 +32,40 @@ function downloadCSV(rows, filename) {
 }
 
 /* ─── Report Modal ──────────────────────────────────────────────── */
-function ReportModal({ type, onClose }) {
-  const config = REPORT_CONFIGS[type];
+function ReportModal({ type, orders, onClose }) {
+  const config = useMemo(() => {
+    const now = new Date();
+    const filtered = (orders || []).filter(o => {
+      const d = new Date(o.placed_at);
+      if (type === 'daily') return d.toDateString() === now.toDateString();
+      if (type === 'weekly') return d > new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      if (type === 'monthly') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      if (type === 'yearly') return d.getFullYear() === now.getFullYear();
+      return true; // gst
+    });
+
+    const labels = {
+      daily: { label: "Daily Report", subtitle: `Today — ${now.toLocaleDateString()}` },
+      weekly: { label: "Weekly Report", subtitle: "Last 7 Days" },
+      monthly: { label: "Monthly Report", subtitle: now.toLocaleString('default', { month: 'long', year: 'numeric' }) },
+      yearly: { label: "Yearly Report", subtitle: `Financial Year ${now.getFullYear()}` },
+      gst: { label: "GST Invoice Report", subtitle: "Full Period" },
+    };
+
+    return { ...labels[type], rows: filtered };
+  }, [type, orders]);
+
   if (!config) return null;
   const rows = config.rows;
 
-  const totalRevenue  = rows.reduce((s, r) => s + parseInt(r.revenue.replace(/[^0-9]/g, ""), 10), 0);
-  const totalDiscount = rows.reduce((s, r) => s + parseInt(r.discount.replace(/[^0-9]/g, ""), 10), 0);
-  const totalGST      = rows.reduce((s, r) => s + parseInt(r.gst.replace(/[^0-9]/g, ""), 10), 0);
-  const paidCount     = rows.filter(r => r.status === "Paid").length;
+  const totalRevenue  = rows.reduce((s, r) => s + parseFloat(r.revenue || 0), 0);
+  const totalDiscount = rows.reduce((s, r) => s + parseFloat(r.discount || 0), 0);
+  const totalGST      = rows.reduce((s, r) => s + parseFloat(r.gst || 0), 0);
+  const paidCount     = rows.filter(r => r.status === "Paid" || r.status === "Completed").length;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-card rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
-        {/* Header */}
         <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b bg-card z-10">
           <div>
             <h2 className="text-lg font-bold text-card-foreground">{config.label}</h2>
@@ -118,7 +89,6 @@ function ReportModal({ type, onClose }) {
         </div>
 
         <div className="p-6 space-y-5">
-          {/* Summary Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               { label: "Total Orders",   value: rows.length       },
@@ -133,7 +103,6 @@ function ReportModal({ type, onClose }) {
             ))}
           </div>
 
-          {/* Payment Status breakdown */}
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-success" />
@@ -145,7 +114,6 @@ function ReportModal({ type, onClose }) {
             </span>
           </div>
 
-          {/* Table */}
           <div className="overflow-x-auto rounded-lg border">
             <table className="w-full text-xs">
               <thead className="bg-secondary/50 border-b">
@@ -156,17 +124,17 @@ function ReportModal({ type, onClose }) {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {rows.map((r) => (
-                  <tr key={r.orderId} className="hover:bg-secondary/20 transition-colors">
+                {rows.map((r, idx) => (
+                  <tr key={`${r.orderId}-${idx}`} className="hover:bg-secondary/20 transition-colors">
                     <td className="px-3 py-2.5 font-medium text-card-foreground font-mono text-[11px]">{r.orderId}</td>
                     <td className="px-3 py-2.5 text-card-foreground">{r.product}</td>
                     <td className="px-3 py-2.5 text-muted-foreground text-center">{r.qty}</td>
-                    <td className="px-3 py-2.5 font-semibold text-card-foreground">{r.revenue}</td>
-                    <td className="px-3 py-2.5 text-success font-medium">{r.discount}</td>
+                    <td className="px-3 py-2.5 font-semibold text-card-foreground">₹{parseFloat(r.revenue).toLocaleString()}</td>
+                    <td className="px-3 py-2.5 text-success font-medium">₹{parseFloat(r.discount).toLocaleString()}</td>
                     <td className="px-3 py-2.5 text-muted-foreground">{r.payment}</td>
                     <td className="px-3 py-2.5">
                       <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
-                        r.status === "Paid"     ? "bg-success/10 text-success"
+                        r.status === "Paid" || r.status === "Completed" ? "bg-success/10 text-success"
                         : r.status === "Pending" ? "bg-warning/10 text-warning"
                         : "bg-destructive/10 text-destructive"
                       }`}>
@@ -174,7 +142,7 @@ function ReportModal({ type, onClose }) {
                       </span>
                     </td>
                     {type === "gst" && (
-                      <td className="px-3 py-2.5 font-medium text-card-foreground">{r.gst}</td>
+                      <td className="px-3 py-2.5 font-medium text-card-foreground">₹{parseFloat(r.gst).toLocaleString()}</td>
                     )}
                   </tr>
                 ))}
@@ -201,12 +169,39 @@ function ReportModal({ type, onClose }) {
 export default function ReportsPage() {
   const [search, setSearch]         = useState("");
   const [activeReport, setActiveReport] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState({
+    kpis: {},
+    revenueTrend: [],
+    sellerComparison: [],
+    topProducts: [],
+    allOrders: []
+  });
 
-  const filteredProducts = topProducts.filter(
-    (p) =>
-      p.item.toLowerCase().includes(search.toLowerCase()) ||
-      p.seller.toLowerCase().includes(search.toLowerCase())
-  );
+  const fetchReports = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/finance/admin/reports');
+      const json = await res.json();
+      setData(json);
+    } catch (err) {
+      console.error("Failed to fetch reports:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
+
+  const filteredProducts = useMemo(() => {
+    return (data.topProducts || []).filter(
+      (p) =>
+        p.item.toLowerCase().includes(search.toLowerCase()) ||
+        p.seller.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [data.topProducts, search]);
 
   const REPORT_BTNS = [
     { key: "daily",   label: "Daily Report",   variant: "outline" },
@@ -216,9 +211,17 @@ export default function ReportsPage() {
     { key: "gst",     label: "GST Invoice",    variant: "default" },
   ];
 
+  const monthLabels = useMemo(() => {
+    const d = new Date();
+    return [
+      new Date(d.getFullYear(), d.getMonth() - 2, 1).toLocaleString('default', { month: 'short' }),
+      new Date(d.getFullYear(), d.getMonth() - 1, 1).toLocaleString('default', { month: 'short' }),
+      new Date(d.getFullYear(), d.getMonth(), 1).toLocaleString('default', { month: 'short' }),
+    ];
+  }, []);
+
   return (
     <div className="space-y-5">
-      {/* Page Header */}
       <div className="page-header flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
           <h1 className="page-title">Sales Reports</h1>
@@ -240,15 +243,17 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Total Sales (Q1)"   value="₹1.90Cr" change="+16.4% vs Q4"        changeType="positive" icon={TrendingUp} />
-        <StatCard title="Total Orders"       value="13,280"  change="+11.2% vs Q4"         changeType="positive" icon={ShoppingCart} />
-        <StatCard title="Avg. Order Value"   value="₹1,430"  change="+4.7% improvement"    changeType="positive" icon={FileBarChart} />
-        <StatCard title="Active Customers"   value="28,400"  change="+3,200 new"           changeType="positive" icon={Users} />
+        {loading ? Array(4).fill(0).map((_, i) => <Skeleton key={i} h={100} r={12} />) : (
+          <>
+            <StatCard title="Total Sales (Qtr)" value={`${fmtShort(data.kpis?.totalSales || 0)}`} change="+100% Real-time" changeType="positive" icon={TrendingUp} />
+            <StatCard title="Total Orders" value={data.kpis?.totalOrders || 0} change="Live Tracking" changeType="positive" icon={ShoppingCart} />
+            <StatCard title="Avg. Order Value" value={`₹${Math.round(data.kpis?.avgOrderValue || 0)}`} change="Dynamic" changeType="positive" icon={FileBarChart} />
+            <StatCard title="Active Customers" value={data.kpis?.activeCustomers || 0} change="Current Database" changeType="positive" icon={Users} />
+          </>
+        )}
       </div>
 
-      {/* Revenue Trend Chart */}
       <div className="chart-card">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -261,42 +266,40 @@ export default function ReportsPage() {
           </div>
         </div>
         <ResponsiveContainer width="100%" height={260}>
-          <AreaChart data={monthlySales} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+          <AreaChart data={data.revenueTrend} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
             <defs>
               <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="hsl(25,95%,53%)" stopOpacity={0.3} />
                 <stop offset="100%" stopColor="hsl(25,95%,53%)" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,13%,91%)" />
-            <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(220,9%,46%)" />
-            <YAxis yAxisId="left"  tick={{ fontSize: 11 }} stroke="hsl(220,9%,46%)" tickFormatter={(v) => `₹${v/1000}k`} />
-            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} stroke="hsl(220,9%,46%)" />
-            <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-            <Area  yAxisId="left"  type="monotone" dataKey="revenue" stroke="hsl(25,95%,53%)"  fill="url(#salesGrad)" strokeWidth={2} name="Revenue" />
-            <Line  yAxisId="right" type="monotone" dataKey="orders"  stroke="hsl(210,92%,55%)" strokeWidth={2} dot={{ r: 3 }} name="Orders" />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,13%,91%)" vertical={false} />
+            <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="hsl(220,9%,46%)" axisLine={false} tickLine={false} />
+            <YAxis yAxisId="left" tick={{ fontSize: 11 }} stroke="hsl(220,9%,46%)" axisLine={false} tickLine={false} tickFormatter={(v) => `₹${fmtShort(v)}`} />
+            <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} stroke="hsl(220,9%,46%)" axisLine={false} tickLine={false} />
+            <Tooltip content={<CustomTooltip />} />
+            <Area yAxisId="left" type="monotone" dataKey="revenue" stroke="hsl(25,95%,53%)" fill="url(#salesGrad)" strokeWidth={2.5} name="Revenue" />
+            <Line yAxisId="right" type="monotone" dataKey="orders" stroke="hsl(210,92%,55%)" strokeWidth={2.5} dot={false} name="Orders" />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Seller Comparison */}
       <div className="chart-card">
-        <h3 className="chart-title">Seller Sales Comparison (Q1 2026)</h3>
+        <h3 className="chart-title">Seller Sales Comparison (Qtrly)</h3>
         <p className="chart-subtitle mb-4">Monthly sales by top sellers</p>
         <ResponsiveContainer width="100%" height={230}>
-          <BarChart data={sellerSales} margin={{ top: 0, right: 10, left: -10, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,13%,91%)" />
-            <XAxis dataKey="seller" tick={{ fontSize: 10 }} stroke="hsl(220,9%,46%)" />
-            <YAxis tick={{ fontSize: 10 }} stroke="hsl(220,9%,46%)" tickFormatter={(v) => `₹${v/1000}k`} />
-            <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(v) => [`₹${(v/1000).toFixed(0)}k`]} />
-            <Bar dataKey="jan" name="January"  fill="hsl(25,95%,53%)"   radius={[2, 2, 0, 0]} />
-            <Bar dataKey="feb" name="February" fill="hsl(210,92%,55%)"  radius={[2, 2, 0, 0]} />
-            <Bar dataKey="mar" name="March"    fill="hsl(217,91%,60%)"  radius={[2, 2, 0, 0]} />
+          <BarChart data={data.sellerComparison} margin={{ top: 0, right: 10, left: -10, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,13%,91%)" vertical={false} />
+            <XAxis dataKey="seller" tick={{ fontSize: 10 }} stroke="hsl(220,9%,46%)" axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10 }} stroke="hsl(220,9%,46%)" axisLine={false} tickLine={false} tickFormatter={(v) => `₹${fmtShort(v)}`} />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="month1" name={monthLabels[0]} fill="hsl(25,95%,53%)" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="month2" name={monthLabels[1]} fill="hsl(210,92%,55%)" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="month3" name={monthLabels[2]} fill="hsl(217,91%,60%)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Top Selling Products Table */}
       <div className="chart-card">
         <h3 className="chart-title">Top Selling Products</h3>
         <p className="chart-subtitle mb-3">Best performing products this quarter</p>
@@ -310,25 +313,26 @@ export default function ReportsPage() {
           />
         </div>
         <div className="overflow-x-auto border rounded-xl overflow-hidden">
-          <table className="data-table">
-            <thead>
+          <table className="w-full text-xs">
+            <thead className="bg-secondary/50 border-b">
               <tr>
-                <th className="text-left">Product</th>
-                <th className="text-left">Seller</th>
-                <th className="text-right">Quantity Sold</th>
-                <th className="text-right">Revenue</th>
-                <th className="text-center">Growth</th>
+                <th className="px-4 py-3 text-left font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">Product</th>
+                <th className="px-4 py-3 text-left font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">Seller</th>
+                <th className="px-4 py-3 text-right font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">Qty Sold</th>
+                <th className="px-4 py-3 text-right font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">Revenue</th>
+                <th className="px-4 py-3 text-center font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">Growth</th>
               </tr>
             </thead>
-            <tbody>
-              {filteredProducts.map((s) => (
-                <tr key={s.item}>
-                  <td className="font-semibold text-card-foreground text-left">{s.item}</td>
-                  <td className="text-muted-foreground text-left">{s.seller}</td>
-                  <td className="text-card-foreground font-medium text-right">{s.qty}</td>
-                  <td className="font-bold text-card-foreground text-right">{s.value}</td>
-                  <td className="text-center">
-                    <span className={s.growth.startsWith("+") ? "badge-success text-[10px]" : "badge-danger text-[10px]"}>
+            <tbody className="divide-y">
+              {loading ? Array(5).fill(0).map((_, i) => <tr key={i}><td colSpan={5} className="p-4"><Skeleton h={20} /></td></tr>) :
+               filteredProducts.map((s, idx) => (
+                <tr key={`${s.item}-${idx}`} className="hover:bg-secondary/20 transition-colors">
+                  <td className="px-4 py-3 font-semibold text-card-foreground text-left">{s.item}</td>
+                  <td className="px-4 py-3 text-muted-foreground text-left">{s.seller}</td>
+                  <td className="px-4 py-3 text-card-foreground font-medium text-right">{s.qty}</td>
+                  <td className="px-4 py-3 font-bold text-card-foreground text-right">₹{parseFloat(s.value).toLocaleString()}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className="badge-success text-[10px]">
                       {s.growth}
                     </span>
                   </td>
@@ -339,7 +343,6 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Downloadable Report Tiles */}
       <div className="rounded-xl border bg-card shadow-sm p-5">
         <h3 className="chart-title mb-1">Downloadable Reports</h3>
         <p className="chart-subtitle mb-4">Click any report to view details and download as CSV</p>
@@ -363,9 +366,8 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Report Modal */}
       {activeReport && (
-        <ReportModal type={activeReport} onClose={() => setActiveReport(null)} />
+        <ReportModal type={activeReport} orders={data.allOrders} onClose={() => setActiveReport(null)} />
       )}
     </div>
   );

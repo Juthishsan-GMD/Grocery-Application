@@ -24,6 +24,17 @@ router.get('/seller/:id', async (req, res) => {
   }
 });
 
+// GET NOTIFICATIONS FOR AN ADMIN
+router.get('/admin/:id', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM notifications WHERE admin_id = $1 ORDER BY created_at DESC', [req.params.id]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to fetch admin notifications' });
+  }
+});
+
 // MARK AS READ
 router.put('/:id/read', async (req, res) => {
   try {
@@ -48,13 +59,13 @@ router.delete('/:id', async (req, res) => {
 
 // CREATE NOTIFICATION
 router.post('/', async (req, res) => {
-  const { customerId, sellerId, orderId, type, message } = req.body;
+  const { customerId, sellerId, adminId, orderId, type, message } = req.body;
   try {
-    await pool.query(
-      'INSERT INTO notifications (customer_id, seller_id, order_id, type, message, expires_at) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP + INTERVAL \'30 days\')',
-      [customerId || null, sellerId || null, orderId || null, type, message]
+    const result = await pool.query(
+      'INSERT INTO notifications (customer_id, seller_id, admin_id, order_id, type, message, expires_at) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP + INTERVAL \'30 days\') RETURNING *',
+      [customerId || null, sellerId || null, adminId || null, orderId || null, type, message]
     );
-    res.json({ success: true });
+    res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to create notification' });
