@@ -157,8 +157,8 @@ router.post('/', async (req, res) => {
       `;
       const itemTotal = Number(item.totalPrice) || (Number(item.unitPrice) * Number(item.quantity || 1)) || 0;
       
-      const itemSellerId = p.seller_id || item.sellerId || null;
-      const itemAdminId = p.admin_id || null;
+      const itemSellerId = (p.seller_id && p.seller_id.trim() !== '') ? p.seller_id : (item.sellerId && item.sellerId.trim() !== '') ? item.sellerId : null;
+      const itemAdminId = (p.admin_id && p.admin_id.trim() !== '') ? p.admin_id : null;
 
       if (itemSellerId) {
         sellerTotals[itemSellerId] = (sellerTotals[itemSellerId] || 0) + itemTotal;

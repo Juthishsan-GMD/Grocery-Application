@@ -758,7 +758,8 @@ CREATE TABLE IF NOT EXISTS annual_finances (
     platform_commission DECIMAL(15,2) DEFAULT 0,
     net_seller_earnings DECIMAL(15,2) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (seller_id, admin_id, year)
+    UNIQUE (seller_id, admin_id, year),
+    CONSTRAINT check_entity_annual CHECK (seller_id IS NOT NULL OR admin_id IS NOT NULL)
 );
 
 -- 30. HALF_YEARLY_FINANCES Table
@@ -773,7 +774,8 @@ CREATE TABLE IF NOT EXISTS half_yearly_finances (
     platform_commission DECIMAL(15,2) DEFAULT 0,
     net_seller_earnings DECIMAL(15,2) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (seller_id, admin_id, half_number, year)
+    UNIQUE (seller_id, admin_id, half_number, year),
+    CONSTRAINT check_entity_half CHECK (seller_id IS NOT NULL OR admin_id IS NOT NULL)
 );
 
 -- 31. QUARTERLY_FINANCES Table
@@ -1204,7 +1206,17 @@ DECLARE
     v_year INT;
     v_commission DECIMAL(15,2);
     v_earnings DECIMAL(15,2);
+    v_annual_id VARCHAR(20);
+    v_half_id VARCHAR(20);
+    v_quarter_id VARCHAR(20);
+    v_month_id VARCHAR(20);
+    v_weekly_id VARCHAR(20);
 BEGIN
+    -- Skip if both are NULL (safety check)
+    IF NEW.seller_id IS NULL AND NEW.admin_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+
     -- Get time components
     v_date := CURRENT_DATE;
     v_week := EXTRACT(WEEK FROM v_date);
@@ -1222,50 +1234,69 @@ BEGIN
         v_earnings := NEW.seller_subtotal - v_commission;
     END IF;
 
-    -- 1. Update Daily Finances
-    INSERT INTO daily_finances (seller_id, admin_id, date, total_revenue, platform_commission, net_seller_earnings)
-    VALUES (NEW.seller_id, NEW.admin_id, v_date, NEW.seller_subtotal, v_commission, v_earnings)
-    ON CONFLICT (seller_id, admin_id, date) 
-    DO UPDATE SET 
-        total_revenue = daily_finances.total_revenue + EXCLUDED.total_revenue,
-        platform_commission = daily_finances.platform_commission + EXCLUDED.platform_commission,
-        net_seller_earnings = daily_finances.net_seller_earnings + EXCLUDED.net_seller_earnings;
-
-    -- 2. Update Weekly Finances
-    INSERT INTO weekly_finances (seller_id, admin_id, week_number, year, total_revenue, platform_commission, net_seller_earnings)
-    VALUES (NEW.seller_id, NEW.admin_id, v_week, v_year, NEW.seller_subtotal, v_commission, v_earnings)
-    ON CONFLICT (seller_id, admin_id, week_number, year) 
-    DO UPDATE SET 
-        total_revenue = weekly_finances.total_revenue + EXCLUDED.total_revenue,
-        platform_commission = weekly_finances.platform_commission + EXCLUDED.platform_commission,
-        net_seller_earnings = weekly_finances.net_seller_earnings + EXCLUDED.net_seller_earnings;
-
-    -- 3. Update Monthly Finances
-    INSERT INTO monthly_finances (seller_id, admin_id, month_number, year, total_revenue, platform_commission, net_seller_earnings)
-    VALUES (NEW.seller_id, NEW.admin_id, v_month, v_year, NEW.seller_subtotal, v_commission, v_earnings)
-    ON CONFLICT (seller_id, admin_id, month_number, year) 
-    DO UPDATE SET 
-        total_revenue = monthly_finances.total_revenue + EXCLUDED.total_revenue,
-        platform_commission = monthly_finances.platform_commission + EXCLUDED.platform_commission,
-        net_seller_earnings = monthly_finances.net_seller_earnings + EXCLUDED.net_seller_earnings;
-
-    -- 4. Update Quarterly Finances
-    INSERT INTO quarterly_finances (seller_id, admin_id, quarter_number, year, total_revenue, platform_commission, net_seller_earnings)
-    VALUES (NEW.seller_id, NEW.admin_id, v_quarter, v_year, NEW.seller_subtotal, v_commission, v_earnings)
-    ON CONFLICT (seller_id, admin_id, quarter_number, year) 
-    DO UPDATE SET 
-        total_revenue = quarterly_finances.total_revenue + EXCLUDED.total_revenue,
-        platform_commission = quarterly_finances.platform_commission + EXCLUDED.platform_commission,
-        net_seller_earnings = quarterly_finances.net_seller_earnings + EXCLUDED.net_seller_earnings;
-
-    -- 5. Update Annual Finances
+    -- 1. Update Annual Finances (Primary parent)
     INSERT INTO annual_finances (seller_id, admin_id, year, total_revenue, platform_commission, net_seller_earnings)
     VALUES (NEW.seller_id, NEW.admin_id, v_year, NEW.seller_subtotal, v_commission, v_earnings)
     ON CONFLICT (seller_id, admin_id, year) 
     DO UPDATE SET 
         total_revenue = annual_finances.total_revenue + EXCLUDED.total_revenue,
         platform_commission = annual_finances.platform_commission + EXCLUDED.platform_commission,
-        net_seller_earnings = annual_finances.net_seller_earnings + EXCLUDED.net_seller_earnings;
+        net_seller_earnings = annual_finances.net_seller_earnings + EXCLUDED.net_seller_earnings
+    RETURNING annual_finance_id INTO v_annual_id;
+
+    -- 2. Update Half-Yearly Finances
+    INSERT INTO half_yearly_finances (seller_id, admin_id, half_number, year, annual_finance_id, total_revenue, platform_commission, net_seller_earnings)
+    VALUES (NEW.seller_id, NEW.admin_id, v_half, v_year, v_annual_id, NEW.seller_subtotal, v_commission, v_earnings)
+    ON CONFLICT (seller_id, admin_id, half_number, year) 
+    DO UPDATE SET 
+        total_revenue = half_yearly_finances.total_revenue + EXCLUDED.total_revenue,
+        platform_commission = half_yearly_finances.platform_commission + EXCLUDED.platform_commission,
+        net_seller_earnings = half_yearly_finances.net_seller_earnings + EXCLUDED.net_seller_earnings,
+        annual_finance_id = COALESCE(half_yearly_finances.annual_finance_id, EXCLUDED.annual_finance_id)
+    RETURNING half_yearly_finance_id INTO v_half_id;
+
+    -- 3. Update Quarterly Finances
+    INSERT INTO quarterly_finances (seller_id, admin_id, quarter_number, year, half_yearly_finance_id, total_revenue, platform_commission, net_seller_earnings)
+    VALUES (NEW.seller_id, NEW.admin_id, v_quarter, v_year, v_half_id, NEW.seller_subtotal, v_commission, v_earnings)
+    ON CONFLICT (seller_id, admin_id, quarter_number, year) 
+    DO UPDATE SET 
+        total_revenue = quarterly_finances.total_revenue + EXCLUDED.total_revenue,
+        platform_commission = quarterly_finances.platform_commission + EXCLUDED.platform_commission,
+        net_seller_earnings = quarterly_finances.net_seller_earnings + EXCLUDED.net_seller_earnings,
+        half_yearly_finance_id = COALESCE(quarterly_finances.half_yearly_finance_id, EXCLUDED.half_yearly_finance_id)
+    RETURNING quarterly_finance_id INTO v_quarter_id;
+
+    -- 4. Update Monthly Finances
+    INSERT INTO monthly_finances (seller_id, admin_id, month_number, year, quarterly_finance_id, total_revenue, platform_commission, net_seller_earnings)
+    VALUES (NEW.seller_id, NEW.admin_id, v_month, v_year, v_quarter_id, NEW.seller_subtotal, v_commission, v_earnings)
+    ON CONFLICT (seller_id, admin_id, month_number, year) 
+    DO UPDATE SET 
+        total_revenue = monthly_finances.total_revenue + EXCLUDED.total_revenue,
+        platform_commission = monthly_finances.platform_commission + EXCLUDED.platform_commission,
+        net_seller_earnings = monthly_finances.net_seller_earnings + EXCLUDED.net_seller_earnings,
+        quarterly_finance_id = COALESCE(monthly_finances.quarterly_finance_id, EXCLUDED.quarterly_finance_id)
+    RETURNING monthly_finance_id INTO v_month_id;
+
+    -- 5. Update Weekly Finances
+    INSERT INTO weekly_finances (seller_id, admin_id, week_number, year, total_revenue, platform_commission, net_seller_earnings)
+    VALUES (NEW.seller_id, NEW.admin_id, v_week, v_year, NEW.seller_subtotal, v_commission, v_earnings)
+    ON CONFLICT (seller_id, admin_id, week_number, year) 
+    DO UPDATE SET 
+        total_revenue = weekly_finances.total_revenue + EXCLUDED.total_revenue,
+        platform_commission = weekly_finances.platform_commission + EXCLUDED.platform_commission,
+        net_seller_earnings = weekly_finances.net_seller_earnings + EXCLUDED.net_seller_earnings
+    RETURNING weekly_finance_id INTO v_weekly_id;
+
+    -- 6. Update Daily Finances
+    INSERT INTO daily_finances (seller_id, admin_id, date, weekly_finance_id, monthly_finance_id, total_revenue, platform_commission, net_seller_earnings)
+    VALUES (NEW.seller_id, NEW.admin_id, v_date, v_weekly_id, v_month_id, NEW.seller_subtotal, v_commission, v_earnings)
+    ON CONFLICT (seller_id, admin_id, date) 
+    DO UPDATE SET 
+        total_revenue = daily_finances.total_revenue + EXCLUDED.total_revenue,
+        platform_commission = daily_finances.platform_commission + EXCLUDED.platform_commission,
+        net_seller_earnings = daily_finances.net_seller_earnings + EXCLUDED.net_seller_earnings,
+        weekly_finance_id = COALESCE(daily_finances.weekly_finance_id, EXCLUDED.weekly_finance_id),
+        monthly_finance_id = COALESCE(daily_finances.monthly_finance_id, EXCLUDED.monthly_finance_id);
 
     RETURN NEW;
 END;
